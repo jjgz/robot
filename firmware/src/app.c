@@ -154,6 +154,7 @@ void APP_Tasks ( void )
 
         case APP_STATE_SERVICE_TASKS:
         {
+            
             SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
             break;
         }
