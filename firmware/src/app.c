@@ -156,6 +156,7 @@ void APP_Tasks ( void )
         {
             
             SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+            SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
             break;
         }
 
