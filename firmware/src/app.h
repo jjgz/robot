@@ -47,6 +47,12 @@ extern "C" {
 
 #endif
 // DOM-IGNORE-END 
+    
+typedef struct App0QueueItem {
+    bool lights;
+};
+
+void app0_queue_add(const App0QueueItem *item);
 
 void APP_Initialize ( void );
 

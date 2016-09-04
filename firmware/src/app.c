@@ -24,9 +24,17 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "app.h"
+#include "queue.h"
 
-void APP_Initialize ( void )
-{
+QueueHandle_t queue;
+
+void app0_queue_add(const App0QueueItem *item) {
+    xQueueSend(queue, item, portMAX_DELAY);
+}
+
+
+void APP_Initialize() {
+    queue = xQueueCreate();
 }
 
 
@@ -38,9 +46,12 @@ void APP_Initialize ( void )
     See prototype in app.h.
  */
 
-void APP_Tasks ( void )
-{
-    
+void APP_Tasks() {
+    App0QueueItem item;
+    while (1) {
+        xQueueReceive(queue, &item, portMAX_DELAY);
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, item.lights);
+    }
 }
 
  
