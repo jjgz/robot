@@ -69,7 +69,15 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // Section: System Interrupt Vector Functions
 // *****************************************************************************
 // *****************************************************************************
- 
+
+    
+void IntHandlerDrvTmrInstance0(void)
+{
+    App0QueueItem item;
+    app0_isr_add(&item);
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
+}
+  
 /*******************************************************************************
  End of File
 */

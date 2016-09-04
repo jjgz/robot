@@ -48,11 +48,11 @@ extern "C" {
 #endif
 // DOM-IGNORE-END 
     
-typedef struct App0QueueItem {
+typedef struct {
     bool lights;
-};
+} App0QueueItem;
 
-void app0_queue_add(const App0QueueItem *item);
+void app0_isr_add(const App0QueueItem *item);
 
 void APP_Initialize ( void );
 

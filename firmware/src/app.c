@@ -26,15 +26,19 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "app.h"
 #include "queue.h"
 
-QueueHandle_t queue;
+#define APP0_QUEUE_LEN 10
 
-void app0_queue_add(const App0QueueItem *item) {
-    xQueueSend(queue, item, portMAX_DELAY);
+QueueHandle_t queue;
+bool ledtoggle;
+
+void app0_isr_add(const App0QueueItem *item) {
+    xQueueSendToBackFromISR(queue, item, NULL);
 }
 
 
 void APP_Initialize() {
-    queue = xQueueCreate();
+    queue = xQueueCreate(APP0_QUEUE_LEN, sizeof(App0QueueItem));
+    ledtoggle = 0;
 }
 
 
@@ -50,7 +54,8 @@ void APP_Tasks() {
     App0QueueItem item;
     while (1) {
         xQueueReceive(queue, &item, portMAX_DELAY);
-        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, item.lights);
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, ledtoggle);
+        ledtoggle = !ledtoggle;
     }
 }
 
