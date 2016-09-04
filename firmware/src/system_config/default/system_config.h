@@ -86,6 +86,9 @@ extern "C" {
 #define SYS_CLK_CONFIG_PRIMARY_XTAL         8000000ul
 #define SYS_CLK_CONFIG_SECONDARY_XTAL       0ul
    
+/*** Interrupt System Service Configuration ***/
+#define SYS_INT                     true
+
 /*** Ports System Service Configuration ***/
 #define SYS_PORT_AD1PCFG        ~0xffff
 #define SYS_PORT_CNPUE          0x0
@@ -111,6 +114,8 @@ extern "C" {
 // Section: Middleware & Other Library Configuration
 // *****************************************************************************
 // *****************************************************************************
+/*** OSAL Configuration ***/
+#define OSAL_USE_RTOS          1
 
 
 

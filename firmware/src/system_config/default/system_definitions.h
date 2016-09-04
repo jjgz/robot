@@ -55,10 +55,13 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system/clk/sys_clk.h"
 #include "system/clk/sys_clk_static.h"
 #include "system/devcon/sys_devcon.h"
+#include "system/int/sys_int.h"
 #include "system/ports/sys_ports.h"
 
 
 
+#include "FreeRTOS.h"
+#include "task.h"
 #include "app.h"
 
 

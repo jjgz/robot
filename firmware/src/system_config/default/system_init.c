@@ -168,6 +168,9 @@ void SYS_Initialize ( void* data )
     /* Initialize Drivers */
 
     /* Initialize System Services */
+
+    /*** Interrupt Service Initialization Code ***/
+    SYS_INT_Initialize();
   
     /* Initialize Middleware */
 
