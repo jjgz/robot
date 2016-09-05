@@ -70,12 +70,12 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 // *****************************************************************************
 
-volatile bool test;
+volatile unsigned char sval = 1;
 
 void IntHandlerDrvTmrInstance0(void)
 {
-    test = !test;
-    debug_val_isr(test ? 0b10101111 : ~0b10101111);
+    sval = (sval << 1) | (sval >> 7);
+    debug_val_isr(sval);
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
 }
   
