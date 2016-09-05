@@ -65,7 +65,7 @@ void debug_halt() {
     while (1) {}
 }
 
-void debug_halt_isr(unsigned char val) {
+void debug_halt_isr() {
     DebugQueueItem item;
     item.type = DEBUG_QUEUE_HALT;
     xQueueSendToBackFromISR(queue, &item, NULL);
@@ -82,7 +82,7 @@ typedef struct {
     PORTS_BIT_POS bit;
 } Pin;
 
-const Pin[] val_pins = {
+const Pin val_pins[] = {
     {PORT_CHANNEL_F, PORTS_BIT_POS_2},
     {PORT_CHANNEL_F, PORTS_BIT_POS_8},
     {PORT_CHANNEL_E, PORTS_BIT_POS_8},
@@ -93,7 +93,7 @@ const Pin[] val_pins = {
     {PORT_CHANNEL_E, PORTS_BIT_POS_9}
 };
 
-const Pin[] loc_pins = {
+const Pin loc_pins[] = {
     {PORT_CHANNEL_A, PORTS_BIT_POS_0},
     {PORT_CHANNEL_A, PORTS_BIT_POS_1},
     {PORT_CHANNEL_A, PORTS_BIT_POS_4},
@@ -106,22 +106,22 @@ const Pin[] loc_pins = {
 
 void DEBUG_Tasks() {
     DebugQueueItem item;
+    int i;
     while (1) {
         xQueueReceive(queue, &item, portMAX_DELAY);
-        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, ledtoggle);
         switch (item.type) {
             case DEBUG_QUEUE_VAL:
-                for (int i = 0; i < 8; i++) {
+                for (i = 0; i < 8; i++) {
                     SYS_PORTS_PinWrite(0, val_pins[i].reg, val_pins[i].bit, (item.value.val >> i) & 1);
                 }
                 break;
             case DEBUG_QUEUE_LOC:
-                for (int i = 0; i < 8; i++) {
+                for (i = 0; i < 8; i++) {
                     SYS_PORTS_PinWrite(0, loc_pins[i].reg, loc_pins[i].bit, (item.value.loc >> i) & 1);
                 }
                 break;
             case DEBUG_QUEUE_HALT:
-                for (int i = 0; i < 8; i++) {
+                for (i = 0; i < 8; i++) {
                     SYS_PORTS_PinWrite(0, loc_pins[i].reg, loc_pins[i].bit, (DEBUG_LOC_HALT >> i) & 1);
                 }
                 // Halt.

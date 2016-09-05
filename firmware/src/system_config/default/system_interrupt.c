@@ -73,8 +73,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
     
 void IntHandlerDrvTmrInstance0(void)
 {
-    App0QueueItem item;
-    app0_isr_add(&item);
+    debug_val_isr(0b10101111);
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
 }
   
