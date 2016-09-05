@@ -62,12 +62,14 @@ void debug_halt() {
     DebugQueueItem item;
     item.type = DEBUG_QUEUE_HALT;
     xQueueSendToBack(queue, &item, portMAX_DELAY);
+    while (1) {}
 }
 
 void debug_halt_isr(unsigned char val) {
     DebugQueueItem item;
     item.type = DEBUG_QUEUE_HALT;
     xQueueSendToBackFromISR(queue, &item, NULL);
+    while (1) {}
 }
 
 void DEBUG_Initialize() {
@@ -75,20 +77,53 @@ void DEBUG_Initialize() {
     DRV_TMR0_Start();
 }
 
+typedef struct {
+    PORTS_CHANNEL reg;
+    PORTS_BIT_POS bit;
+} Pin;
+
+const Pin[] val_pins = {
+    {PORT_CHANNEL_F, PORTS_BIT_POS_2},
+    {PORT_CHANNEL_F, PORTS_BIT_POS_8},
+    {PORT_CHANNEL_E, PORTS_BIT_POS_8},
+    {PORT_CHANNEL_D, PORTS_BIT_POS_0},
+    {PORT_CHANNEL_C, PORTS_BIT_POS_14},
+    {PORT_CHANNEL_D, PORTS_BIT_POS_1},
+    {PORT_CHANNEL_D, PORTS_BIT_POS_2},
+    {PORT_CHANNEL_E, PORTS_BIT_POS_9}
+};
+
+const Pin[] loc_pins = {
+    {PORT_CHANNEL_A, PORTS_BIT_POS_0},
+    {PORT_CHANNEL_A, PORTS_BIT_POS_1},
+    {PORT_CHANNEL_A, PORTS_BIT_POS_4},
+    {PORT_CHANNEL_A, PORTS_BIT_POS_5},
+    {PORT_CHANNEL_D, PORTS_BIT_POS_9},
+    {PORT_CHANNEL_C, PORTS_BIT_POS_13},
+    {PORT_CHANNEL_D, PORTS_BIT_POS_13},
+    {PORT_CHANNEL_D, PORTS_BIT_POS_7}
+};
+
 void DEBUG_Tasks() {
     DebugQueueItem item;
     while (1) {
         xQueueReceive(queue, &item, portMAX_DELAY);
-        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, ledtoggle);
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, ledtoggle);
         switch (item.type) {
             case DEBUG_QUEUE_VAL:
-                // TODO: Write to pins A8-A15.
+                for (int i = 0; i < 8; i++) {
+                    SYS_PORTS_PinWrite(0, val_pins[i].reg, val_pins[i].bit, (item.value.val >> i) & 1);
+                }
                 break;
             case DEBUG_QUEUE_LOC:
-                // TODO: Write to pins A0-A7.
+                for (int i = 0; i < 8; i++) {
+                    SYS_PORTS_PinWrite(0, loc_pins[i].reg, loc_pins[i].bit, (item.value.loc >> i) & 1);
+                }
                 break;
             case DEBUG_QUEUE_HALT:
-                // TODO: Write DEBUG_LOC_HALT to pins A0-A7.
+                for (int i = 0; i < 8; i++) {
+                    SYS_PORTS_PinWrite(0, loc_pins[i].reg, loc_pins[i].bit, (DEBUG_LOC_HALT >> i) & 1);
+                }
                 // Halt.
                 while (1) {}
                 break;
