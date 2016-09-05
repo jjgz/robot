@@ -111,6 +111,7 @@ void DEBUG_Tasks() {
         xQueueReceive(queue, &item, portMAX_DELAY);
         switch (item.type) {
             case DEBUG_QUEUE_VAL:
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, (item.value.val >> 0) & 1);
                 for (i = 0; i < 8; i++) {
                     SYS_PORTS_PinWrite(0, val_pins[i].reg, val_pins[i].bit, (item.value.val >> i) & 1);
                 }
