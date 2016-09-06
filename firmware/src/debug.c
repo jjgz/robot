@@ -42,18 +42,19 @@ const Pin val_pins[] = {
 };
 
 const Pin loc_pins[] = {
-    {PORT_CHANNEL_D, PORTS_BIT_POS_10},
-    {PORT_CHANNEL_B, PORTS_BIT_POS_11},
-    {PORT_CHANNEL_B, PORTS_BIT_POS_12},
-    {PORT_CHANNEL_A, PORTS_BIT_POS_10},
-    {PORT_CHANNEL_F, PORTS_BIT_POS_1},
-    {PORT_CHANNEL_D, PORTS_BIT_POS_8},
-    {PORT_CHANNEL_G, PORTS_BIT_POS_7},
-    {PORT_CHANNEL_G, PORTS_BIT_POS_6}
+    {PORT_CHANNEL_F, PORTS_BIT_POS_2},
+    {PORT_CHANNEL_F, PORTS_BIT_POS_8},
+    {PORT_CHANNEL_E, PORTS_BIT_POS_8},
+    {PORT_CHANNEL_D, PORTS_BIT_POS_0},
+    {PORT_CHANNEL_A, PORTS_BIT_POS_0},
+    {PORT_CHANNEL_A, PORTS_BIT_POS_1},
+    {PORT_CHANNEL_A, PORTS_BIT_POS_4},
+    {PORT_CHANNEL_A, PORTS_BIT_POS_5}
 };
 
 void debug_val(unsigned char val) {
     int i;
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, val & 1);
     for (i = 0; i < 8; i++) {
         SYS_PORTS_PinWrite(0, val_pins[i].reg, val_pins[i].bit, (val >> i) & 1);
     }

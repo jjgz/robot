@@ -72,8 +72,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 void IntHandlerDrvTmrInstance0(void)
 {
+    debug_loc(DEBUG_LOC_TMR2_ENTER);
     strsend_update_isr();
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
+    debug_loc(DEBUG_LOC_TMR2_LEAVE);
 }
   
 /*******************************************************************************

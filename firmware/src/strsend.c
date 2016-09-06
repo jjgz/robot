@@ -24,6 +24,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "strsend.h"
+#include "debug.h"
 #include "queue.h"
 
 #define STRSEND_QUEUE_LEN 64
@@ -36,7 +37,9 @@ int teamstrpos;
 
 void strsend_update_isr() {
     char item;
+    debug_loc(DEBUG_LOC_STRSEND_BEFORE_SEND);
     xQueueSendToBackFromISR(queue, &item, NULL);
+    debug_loc(DEBUG_LOC_STRSEND_AFTER_SEND);
 }
 
 void STRSEND_Initialize() {
@@ -47,10 +50,13 @@ void STRSEND_Initialize() {
 }
 
 void STRSEND_Tasks() {
+    debug_loc(DEBUG_LOC_STRSEND_ENTER);
     char item;
+    debug_loc(DEBUG_LOC_STRSEND_WHILE);
     while (1) {
-        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+        debug_loc(DEBUG_LOC_STRSEND_BEFORE_RECV);
         xQueueReceive(queue, &item, portMAX_DELAY);
+        debug_loc(DEBUG_LOC_STRSEND_AFTER_RECV);
         debug_val(teamstr[teamstrpos++]);
         if (teamstrpos == teamstrlen)
             teamstrpos = 0;
