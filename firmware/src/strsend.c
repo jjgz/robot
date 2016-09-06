@@ -31,10 +31,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 QueueHandle_t queue;
 
-const char *teamstr = "Team 1";
-int teamstrlen;
-int teamstrpos;
-
 void strsend_update_isr() {
     char item;
     debug_loc(DEBUG_LOC_STRSEND_BEFORE_SEND);
@@ -43,13 +39,14 @@ void strsend_update_isr() {
 }
 
 void STRSEND_Initialize() {
-    teamstrlen = strlen(teamstr);
-    teamstrpos = 0;
     queue = xQueueCreate(STRSEND_QUEUE_LEN, 1);
     DRV_TMR0_Start();
 }
 
 void STRSEND_Tasks() {
+    const char *teamstr = "Team 1";
+    int teamstrlen = strlen(teamstr);
+    int teamstrpos;
     debug_loc(DEBUG_LOC_STRSEND_ENTER);
     char item;
     debug_loc(DEBUG_LOC_STRSEND_WHILE);
