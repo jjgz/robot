@@ -54,7 +54,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "system_config.h"
 #include "system_definitions.h"
-#include "debug.h"
+#include "strsend.h"
 
 
 // *****************************************************************************
@@ -66,7 +66,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
  
 static void _SYS_Tasks ( void );
-static void _DEBUG_Tasks(void);
+static void _STRSEND_Tasks(void);
 
 
 // *****************************************************************************
@@ -90,9 +90,9 @@ void SYS_Tasks ( void )
                 "Sys Tasks",
                 1024, NULL, 0, NULL);
 
-    /* Create OS Thread for DEBUG Tasks. */
-    xTaskCreate((TaskFunction_t) _DEBUG_Tasks,
-                "DEBUG Tasks",
+    /* Create OS Thread for STRSEND Tasks. */
+    xTaskCreate((TaskFunction_t) _STRSEND_Tasks,
+                "STRSEND Tasks",
                 1024, NULL, 1, NULL);
 
     /**************
@@ -128,17 +128,17 @@ static void _SYS_Tasks ( void)
 
 /*******************************************************************************
   Function:
-    void _DEBUG_Tasks ( void )
+    void _STRSEND_Tasks ( void )
 
   Summary:
-    Maintains state machine of DEBUG.
+    Maintains state machine of STRSEND.
 */
 
-static void _DEBUG_Tasks(void)
+static void _STRSEND_Tasks(void)
 {
     while(1)
     {
-        DEBUG_Tasks();
+        STRSEND_Tasks();
     }
 }
 

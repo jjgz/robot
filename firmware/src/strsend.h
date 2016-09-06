@@ -5,7 +5,7 @@
     Microchip Technology Inc.
 
   File Name:
-    debug.h
+    strsend.h
 
   Summary:
     This header file provides prototypes and definitions for the application.
@@ -43,8 +43,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
  *******************************************************************************/
 //DOM-IGNORE-END
 
-#ifndef _DEBUG_H
-#define _DEBUG_H
+#ifndef _STRSEND_H
+#define _STRSEND_H
 
 // *****************************************************************************
 // *****************************************************************************
@@ -66,36 +66,15 @@ extern "C" {
 
 #endif
 // DOM-IGNORE-END 
+    
+void strsend_update_isr();
 
-typedef enum {
-    DEBUG_LOC_HALT,
-            
-    DEBUG_LOC_STRSEND_ENTER,
-    DEBUG_LOC_STRSEND_WHILE,
-    DEBUG_LOC_STRSEND_BEFORE_SEND,
-    DEBUG_LOC_STRSEND_AFTER_SEND,
-    DEBUG_LOC_STRSEND_BEFORE_RECV,
-    DEBUG_LOC_STRSEND_AFTER_RECV,
-        
-    DEBUG_LOC_TMR2_ENTER,
-    DEBUG_LOC_TMR2_LEAVE,
-    DEBUG_LOC_TMR2_BEFORE_SEND,
-    DEBUG_LOC_TMR2_AFTER_SEND,
-    DEBUG_LOC_TMR2_BEFORE_RECV,
-    DEBUG_LOC_TMR2_AFTER_RECV,
-} DebugLocation;
+void STRSEND_Initialize();
 
-void debug_val(unsigned char val);
-void debug_val_isr(unsigned char val);
-
-void debug_loc(DebugLocation loc);
-void debug_loc_isr(DebugLocation loc);
-
-void debug_halt();
-void debug_halt_isr();
+void STRSEND_Tasks();
 
 
-#endif /* _DEBUG_H */
+#endif /* _STRSEND_H */
 
 //DOM-IGNORE-BEGIN
 #ifdef __cplusplus

@@ -181,7 +181,7 @@ void SYS_Initialize ( void* data )
 
 
     /* Initialize the Application */
-    DEBUG_Initialize();
+    STRSEND_Initialize();
 }
 
 

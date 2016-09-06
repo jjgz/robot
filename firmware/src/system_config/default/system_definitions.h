@@ -64,7 +64,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "debug.h"
+#include "strsend.h"
 
 
 // DOM-IGNORE-BEGIN

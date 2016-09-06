@@ -90,7 +90,7 @@ extern "C" {
 #define SYS_INT                     true
 
 /*** Ports System Service Configuration ***/
-#define SYS_PORT_AD1PCFG        ~0xffff
+#define SYS_PORT_AD1PCFG        ~0xcfff
 #define SYS_PORT_CNPUE          0x0
 #define SYS_PORT_CNEN           0x0
 
@@ -98,7 +98,7 @@ extern "C" {
 #define SYS_PORT_A_LAT          0x0
 #define SYS_PORT_A_ODC          0x0
 
-#define SYS_PORT_B_TRIS         0xe7ff
+#define SYS_PORT_B_TRIS         0xc7ff
 #define SYS_PORT_B_LAT          0x0
 #define SYS_PORT_B_ODC          0x0
 

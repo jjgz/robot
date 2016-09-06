@@ -23,54 +23,36 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
  *******************************************************************************/
 // DOM-IGNORE-END
 
-#include "debug.h"
+#include "strsend.h"
+#include "queue.h"
 
-typedef struct {
-    PORTS_CHANNEL reg;
-    PORTS_BIT_POS bit;
-} Pin;
+#define STRSEND_QUEUE_LEN 64
 
-const Pin val_pins[] = {
-    {PORT_CHANNEL_C, PORTS_BIT_POS_3},
-    {PORT_CHANNEL_F, PORTS_BIT_POS_3},
-    {PORT_CHANNEL_B, PORTS_BIT_POS_13},
-    {PORT_CHANNEL_G, PORTS_BIT_POS_7},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_6},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_4},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_2},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_0}
-};
+QueueHandle_t queue;
 
-const Pin loc_pins[] = {
-    {PORT_CHANNEL_D, PORTS_BIT_POS_10},
-    {PORT_CHANNEL_B, PORTS_BIT_POS_11},
-    {PORT_CHANNEL_B, PORTS_BIT_POS_12},
-    {PORT_CHANNEL_A, PORTS_BIT_POS_10},
-    {PORT_CHANNEL_F, PORTS_BIT_POS_1},
-    {PORT_CHANNEL_D, PORTS_BIT_POS_8},
-    {PORT_CHANNEL_G, PORTS_BIT_POS_7},
-    {PORT_CHANNEL_G, PORTS_BIT_POS_6}
-};
+const char *teamstr = "Team 1";
+int teamstrlen;
+int teamstrpos;
 
-void debug_val(unsigned char val) {
-    int i;
-    for (i = 0; i < 8; i++) {
-        SYS_PORTS_PinWrite(0, val_pins[i].reg, val_pins[i].bit, (val >> i) & 1);
-    }
+void strsend_update_isr() {
+    char item;
+    xQueueSendToBackFromISR(queue, &item, NULL);
 }
 
-void debug_loc(DebugLocation loc) {
-    int i;
-    for (i = 0; i < 8; i++) {
-        SYS_PORTS_PinWrite(0, loc_pins[i].reg, loc_pins[i].bit, (loc >> i) & 1);
-    }
+void STRSEND_Initialize() {
+    teamstrlen = strlen(teamstr);
+    teamstrpos = 0;
+    queue = xQueueCreate(STRSEND_QUEUE_LEN, 1);
+    DRV_TMR0_Start();
 }
 
-void debug_halt() {
-    int i;
-    for (i = 0; i < 8; i++) {
-        SYS_PORTS_PinWrite(0, loc_pins[i].reg, loc_pins[i].bit, (DEBUG_LOC_HALT >> i) & 1);
+void STRSEND_Tasks() {
+    char item;
+    while (1) {
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+        xQueueReceive(queue, &item, portMAX_DELAY);
+        debug_val(teamstr[teamstrpos++]);
+        if (teamstrpos == teamstrlen)
+            teamstrpos = 0;
     }
-    // Halt.
-    while (1) {}
 }
