@@ -34,7 +34,9 @@ QueueHandle_t queue;
 void strsend_update_isr() {
     char item;
     debug_loc(DEBUG_LOC_STRSEND_BEFORE_SEND);
-    xQueueSendToBackFromISR(queue, &item, NULL);
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    xQueueSendToBackFromISR(queue, &item, &higher_priority_task_woken);
+    portEND_SWITCHING_ISR(higher_priority_task_woken);
     debug_loc(DEBUG_LOC_STRSEND_AFTER_SEND);
 }
 
