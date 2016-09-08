@@ -123,7 +123,6 @@ static char *cause[] =
 
 void _general_exception_handler ( void )
 {
-    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
     /* Mask off Mask of the ExcCode Field from the Cause Register
     Refer to the MIPs Software User's manual */
     _excep_code = (_CP0_GET_CAUSE() & 0x0000007C) >> 2;

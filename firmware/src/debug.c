@@ -54,6 +54,7 @@ const Pin loc_pins[] = {
 
 void debug_val(unsigned char val) {
     int i;
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, val & 1);
     for (i = 0; i < 8; i++) {
         SYS_PORTS_PinWrite(0, val_pins[i].reg, val_pins[i].bit, (val >> i) & 1);
     }
