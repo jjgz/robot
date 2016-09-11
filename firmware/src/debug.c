@@ -30,26 +30,26 @@ typedef struct {
     PORTS_BIT_POS bit;
 } Pin;
 
-const Pin val_pins[] = {
-    {PORT_CHANNEL_C, PORTS_BIT_POS_3},
-    {PORT_CHANNEL_F, PORTS_BIT_POS_3},
-    {PORT_CHANNEL_B, PORTS_BIT_POS_13},
-    {PORT_CHANNEL_G, PORTS_BIT_POS_7},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_6},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_4},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_2},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_0}
+const Pin loc_pins[] = {
+    {PORT_CHANNEL_E, PORTS_BIT_POS_7}, //port 30
+    {PORT_CHANNEL_E, PORTS_BIT_POS_6}, //port 31
+    {PORT_CHANNEL_E, PORTS_BIT_POS_5}, //port 32
+    {PORT_CHANNEL_E, PORTS_BIT_POS_4}, //port 33
+    {PORT_CHANNEL_E, PORTS_BIT_POS_3}, //port 34
+    {PORT_CHANNEL_E, PORTS_BIT_POS_2}, //port 35
+    {PORT_CHANNEL_E, PORTS_BIT_POS_1}, //port 36
+    {PORT_CHANNEL_E, PORTS_BIT_POS_0} //port 37
 };
 
-const Pin loc_pins[] = {
-    {PORT_CHANNEL_F, PORTS_BIT_POS_2},
-    {PORT_CHANNEL_F, PORTS_BIT_POS_8},
-    {PORT_CHANNEL_E, PORTS_BIT_POS_8},
-    {PORT_CHANNEL_D, PORTS_BIT_POS_0},
-    {PORT_CHANNEL_A, PORTS_BIT_POS_0},
-    {PORT_CHANNEL_A, PORTS_BIT_POS_1},
-    {PORT_CHANNEL_A, PORTS_BIT_POS_4},
-    {PORT_CHANNEL_A, PORTS_BIT_POS_5}
+const Pin val_pins[] = {
+    {PORT_CHANNEL_D, PORTS_BIT_POS_1}, //port 0
+    {PORT_CHANNEL_D, PORTS_BIT_POS_2}, //port 1
+    {PORT_CHANNEL_A, PORTS_BIT_POS_6}, //port 80
+    {PORT_CHANNEL_A, PORTS_BIT_POS_7}, //port 81 
+    {PORT_CHANNEL_G, PORTS_BIT_POS_14}, //port 82
+    {PORT_CHANNEL_G, PORTS_BIT_POS_12}, //port 83
+    {PORT_CHANNEL_G, PORTS_BIT_POS_13}, //port 84
+    {PORT_CHANNEL_D, PORTS_BIT_POS_3} //port 9
 };
 
 void debug_val(unsigned char val) {

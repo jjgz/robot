@@ -56,6 +56,11 @@ void STRSEND_Tasks() {
         debug_loc(DEBUG_LOC_STRSEND_BEFORE_RECV);
         xQueueReceive(queue, &item, portMAX_DELAY);
         debug_loc(DEBUG_LOC_STRSEND_AFTER_RECV);
+        //make sure the transmit buffer is not full before trying to write
+      /*  if(!(DRV_USART_TRANSFER_STATUS_TRANSMIT_FULL & DRV_USART0_TransferStatus()))
+        {
+             DRV_USART0_WriteByte('a');
+        }*/
         debug_val(teamstr[teamstrpos++]);
         if (teamstrpos == teamstrlen)
             teamstrpos = 0;

@@ -94,31 +94,23 @@ extern "C" {
 #define SYS_PORT_CNPUE          0x0
 #define SYS_PORT_CNEN           0x0
 
-#define SYS_PORT_A_TRIS         0xc2c4
+#define SYS_PORT_A_TRIS         0xc63f
 #define SYS_PORT_A_LAT          0x0
 #define SYS_PORT_A_ODC          0x0
 
-#define SYS_PORT_B_TRIS         0xc7ff
-#define SYS_PORT_B_LAT          0x0
-#define SYS_PORT_B_ODC          0x0
-
-#define SYS_PORT_C_TRIS         0xf014
-#define SYS_PORT_C_LAT          0x0
-#define SYS_PORT_C_ODC          0x0
-
-#define SYS_PORT_D_TRIS         0xd878
+#define SYS_PORT_D_TRIS         0xfff1
 #define SYS_PORT_D_LAT          0x0
 #define SYS_PORT_D_ODC          0x0
 
-#define SYS_PORT_E_TRIS         0xaa
+#define SYS_PORT_E_TRIS         0x300
 #define SYS_PORT_E_LAT          0x0
 #define SYS_PORT_E_ODC          0x0
 
-#define SYS_PORT_F_TRIS         0x3031
+#define SYS_PORT_F_TRIS         0x303b
 #define SYS_PORT_F_LAT          0x0
 #define SYS_PORT_F_ODC          0x0
 
-#define SYS_PORT_G_TRIS         0xf34b
+#define SYS_PORT_G_TRIS         0x83cf
 #define SYS_PORT_G_LAT          0x0
 #define SYS_PORT_G_ODC          0x0
 
@@ -144,7 +136,18 @@ extern "C" {
 #define DRV_TMR_ASYNC_WRITE_ENABLE_IDX0     false
 #define DRV_TMR_POWER_STATE_IDX0            
 
- 
+ // *****************************************************************************
+/* USART Driver Configuration Options
+*/
+#define DRV_USART_INSTANCES_NUMBER                  1
+#define DRV_USART_CLIENTS_NUMBER                    1
+#define DRV_USART_INTERRUPT_MODE                    true
+#define DRV_USART_BYTE_MODEL_SUPPORT                true
+#define DRV_USART_READ_WRITE_MODEL_SUPPORT          false
+#define DRV_USART_BUFFER_QUEUE_SUPPORT              false
+#define DRV_USART_SUPPORT_TRANSMIT_DMA              false
+#define DRV_USART_SUPPORT_RECEIVE_DMA               false
+
 // *****************************************************************************
 // *****************************************************************************
 // Section: Middleware & Other Library Configuration
