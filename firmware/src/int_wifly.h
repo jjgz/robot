@@ -1,6 +1,8 @@
 #ifndef INT_WIFLY_H
 #define	INT_WIFLY_H
 
+#include "system_definitions.h"
+
 typedef struct {
     bool sending;
     char item;

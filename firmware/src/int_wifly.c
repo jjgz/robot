@@ -1,6 +1,5 @@
 #include "int_wifly.h"
 #include "queue.h"
-#include "system_definitions.h"
 
 #define INT_WIFLY_QUEUE_LEN 1
 
@@ -41,7 +40,6 @@ WiflyIntCycle wifly_int_cycle() {
             cycle.item = current.buff[0];
             current_pos = 0;
             portEND_SWITCHING_ISR(higher_priority_task_woken);
-            return cycle;
         // We didn't receive a buffer.
         } else {
             cycle.sending = false;
@@ -57,6 +55,7 @@ WiflyIntCycle wifly_int_cycle() {
 void wifly_int_acknowledge() {
     current_pos++;
     if (current_pos == current.length) {
+        free(current.buff);
         current.buff = 0;
     }
 }
