@@ -84,6 +84,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
             wifly_int_acknowledge();
         }
     }
+
+    if(!DRV_USART0_ReceiverBufferIsEmpty()){
+        wifly_int_recv_byte(DRV_USART0_ReadByte());
+    }
     DRV_USART_TasksTransmit(sysObj.drvUsart0);
     DRV_USART_TasksReceive(sysObj.drvUsart0);
     DRV_USART_TasksError(sysObj.drvUsart0);

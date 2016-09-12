@@ -61,5 +61,7 @@ void wifly_int_acknowledge() {
 }
 
 void wifly_int_recv_byte(char byte) {
-    
+    if(!receive_buffer_pos){
+        receive_buffer = (unsigned)malloc(sizeof());
+    }
 }
