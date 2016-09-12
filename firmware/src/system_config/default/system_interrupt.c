@@ -71,6 +71,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 // *****************************************************************************
 
+char c = 'a';
+
 void IntHandlerDrvTmrInstance0(void)
 {
     debug_loc(DEBUG_LOC_TMR2_ENTER);
@@ -80,6 +82,12 @@ void IntHandlerDrvTmrInstance0(void)
 }
  void IntHandlerDrvUsartInstance0(void)
 {
+     if (!DRV_USART0_TransmitBufferIsFull()) {
+         DRV_USART0_WriteByte(c);
+         c++;
+         if (c=='z')
+             c = 'a';
+     }
     DRV_USART_TasksTransmit(sysObj.drvUsart0);
     DRV_USART_TasksReceive(sysObj.drvUsart0);
     DRV_USART_TasksError(sysObj.drvUsart0);
