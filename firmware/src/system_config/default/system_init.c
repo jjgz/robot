@@ -99,8 +99,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // Section: Driver Initialization Data
 // *****************************************************************************
 // *****************************************************************************
-// <editor-fold defaultstate="collapsed" desc="DRV_Timer Initialization Data">
-// </editor-fold>
 // <editor-fold defaultstate="collapsed" desc="DRV_USART Initialization Data">
 // </editor-fold>
 
@@ -170,10 +168,7 @@ void SYS_Initialize ( void* data )
     SYS_PORTS_Initialize();
 
     /* Initialize Drivers */
-    /*Initialize TMR0 */
-    DRV_TMR0_Initialize();
- 
-     sysObj.drvUsart0 = DRV_USART_Initialize(DRV_USART_INDEX_0, (SYS_MODULE_INIT *)NULL);
+    sysObj.drvUsart0 = DRV_USART_Initialize(DRV_USART_INDEX_0, (SYS_MODULE_INIT *)NULL);
     SYS_INT_VectorPrioritySet(INT_VECTOR_UART1, INT_PRIORITY_LEVEL1);
     SYS_INT_VectorSubprioritySet(INT_VECTOR_UART1, INT_SUBPRIORITY_LEVEL0);
 
@@ -186,7 +181,10 @@ void SYS_Initialize ( void* data )
 
 
     /* Initialize the Application */
-    STRSEND_Initialize();
+    WIFLY_SEND_Initialize();
+    WIFLY_RECV_Initialize();
+    NETWORK_SEND_Initialize();
+    NETWORK_RECV_Initialize();
 }
 
 

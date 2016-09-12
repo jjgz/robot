@@ -54,7 +54,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "system_config.h"
 #include "system_definitions.h"
-#include "strsend.h"
+#include "wifly_send.h"
+#include "wifly_recv.h"
+#include "network_send.h"
+#include "network_recv.h"
 
 
 // *****************************************************************************
@@ -66,7 +69,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
  
 static void _SYS_Tasks ( void );
-static void _STRSEND_Tasks(void);
+static void _WIFLY_SEND_Tasks(void);
+static void _WIFLY_RECV_Tasks(void);
+static void _NETWORK_SEND_Tasks(void);
+static void _NETWORK_RECV_Tasks(void);
 
 
 // *****************************************************************************
@@ -90,9 +96,24 @@ void SYS_Tasks ( void )
                 "Sys Tasks",
                 1024, NULL, 0, NULL);
 
-    /* Create OS Thread for STRSEND Tasks. */
-    xTaskCreate((TaskFunction_t) _STRSEND_Tasks,
-                "STRSEND Tasks",
+    /* Create OS Thread for WIFLY_SEND Tasks. */
+    xTaskCreate((TaskFunction_t) _WIFLY_SEND_Tasks,
+                "WIFLY_SEND Tasks",
+                1024, NULL, 1, NULL);
+
+    /* Create OS Thread for WIFLY_RECV Tasks. */
+    xTaskCreate((TaskFunction_t) _WIFLY_RECV_Tasks,
+                "WIFLY_RECV Tasks",
+                1024, NULL, 1, NULL);
+
+    /* Create OS Thread for NETWORK_SEND Tasks. */
+    xTaskCreate((TaskFunction_t) _NETWORK_SEND_Tasks,
+                "NETWORK_SEND Tasks",
+                1024, NULL, 1, NULL);
+
+    /* Create OS Thread for NETWORK_RECV Tasks. */
+    xTaskCreate((TaskFunction_t) _NETWORK_RECV_Tasks,
+                "NETWORK_RECV Tasks",
                 1024, NULL, 1, NULL);
 
     /**************
@@ -128,17 +149,68 @@ static void _SYS_Tasks ( void)
 
 /*******************************************************************************
   Function:
-    void _STRSEND_Tasks ( void )
+    void _WIFLY_SEND_Tasks ( void )
 
   Summary:
-    Maintains state machine of STRSEND.
+    Maintains state machine of WIFLY_SEND.
 */
 
-static void _STRSEND_Tasks(void)
+static void _WIFLY_SEND_Tasks(void)
 {
     while(1)
     {
-        STRSEND_Tasks();
+        WIFLY_SEND_Tasks();
+    }
+}
+
+
+/*******************************************************************************
+  Function:
+    void _WIFLY_RECV_Tasks ( void )
+
+  Summary:
+    Maintains state machine of WIFLY_RECV.
+*/
+
+static void _WIFLY_RECV_Tasks(void)
+{
+    while(1)
+    {
+        WIFLY_RECV_Tasks();
+    }
+}
+
+
+/*******************************************************************************
+  Function:
+    void _NETWORK_SEND_Tasks ( void )
+
+  Summary:
+    Maintains state machine of NETWORK_SEND.
+*/
+
+static void _NETWORK_SEND_Tasks(void)
+{
+    while(1)
+    {
+        NETWORK_SEND_Tasks();
+    }
+}
+
+
+/*******************************************************************************
+  Function:
+    void _NETWORK_RECV_Tasks ( void )
+
+  Summary:
+    Maintains state machine of NETWORK_RECV.
+*/
+
+static void _NETWORK_RECV_Tasks(void)
+{
+    while(1)
+    {
+        NETWORK_RECV_Tasks();
     }
 }
 

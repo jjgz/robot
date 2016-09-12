@@ -5,7 +5,7 @@
     Microchip Technology Inc.
 
   File Name:
-    strsend.h
+    network_send.h
 
   Summary:
     This header file provides prototypes and definitions for the application.
@@ -43,8 +43,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
  *******************************************************************************/
 //DOM-IGNORE-END
 
-#ifndef _STRSEND_H
-#define _STRSEND_H
+#ifndef _NETWORK_SEND_H
+#define _NETWORK_SEND_H
 
 // *****************************************************************************
 // *****************************************************************************
@@ -65,16 +65,13 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 extern "C" {
 
 #endif
-// DOM-IGNORE-END 
-    
-void strsend_update_isr();
+// DOM-IGNORE-END
 
-void STRSEND_Initialize();
-
-void STRSEND_Tasks();
+void NETWORK_SEND_Initialize();
+void NETWORK_SEND_Tasks();
 
 
-#endif /* _STRSEND_H */
+#endif /* _NETWORK_SEND_H */
 
 //DOM-IGNORE-BEGIN
 #ifdef __cplusplus

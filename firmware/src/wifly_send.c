@@ -23,46 +23,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
  *******************************************************************************/
 // DOM-IGNORE-END
 
-#include "strsend.h"
-#include "debug.h"
-#include "queue.h"
+#include "wifly_send.h"
 
-#define STRSEND_QUEUE_LEN 64
-
-QueueHandle_t queue;
-
-void strsend_update_isr() {
-    char item;
-    debug_loc(DEBUG_LOC_STRSEND_BEFORE_SEND);
-    BaseType_t higher_priority_task_woken = pdFALSE;
-    xQueueSendToBackFromISR(queue, &item, &higher_priority_task_woken);
-    portEND_SWITCHING_ISR(higher_priority_task_woken);
-    debug_loc(DEBUG_LOC_STRSEND_AFTER_SEND);
+void WIFLY_SEND_Initialize() {
 }
 
-void STRSEND_Initialize() {
-    queue = xQueueCreate(STRSEND_QUEUE_LEN, 1);
-    DRV_TMR0_Start();
-}
-
-void STRSEND_Tasks() {
-    const char *teamstr = "Team 1";
-    int teamstrlen = strlen(teamstr);
-    int teamstrpos;
-    debug_loc(DEBUG_LOC_STRSEND_ENTER);
-    char item;
-    debug_loc(DEBUG_LOC_STRSEND_WHILE);
-    while (1) {
-        debug_loc(DEBUG_LOC_STRSEND_BEFORE_RECV);
-        xQueueReceive(queue, &item, portMAX_DELAY);
-        debug_loc(DEBUG_LOC_STRSEND_AFTER_RECV);
-        //make sure the transmit buffer is not full before trying to write
-      /*  if(!(DRV_USART_TRANSFER_STATUS_TRANSMIT_FULL & DRV_USART0_TransferStatus()))
-        {
-             DRV_USART0_WriteByte('a');
-        }*/
-        debug_val(teamstr[teamstrpos++]);
-        if (teamstrpos == teamstrlen)
-            teamstrpos = 0;
-    }
+void WIFLY_SEND_Tasks() {
 }

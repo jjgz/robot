@@ -61,8 +61,10 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include <xc.h>
 #include <sys/attribs.h>
-#include "debug.h"
-#include "strsend.h"
+#include "wifly_send.h"
+#include "wifly_recv.h"
+#include "network_send.h"
+#include "network_recv.h"
 #include "system_definitions.h"
 
 // *****************************************************************************
@@ -72,14 +74,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 
 char c = 'a';
-
-void IntHandlerDrvTmrInstance0(void)
-{
-    debug_loc(DEBUG_LOC_TMR2_ENTER);
-    strsend_update_isr();
-    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
-    debug_loc(DEBUG_LOC_TMR2_LEAVE);
-}
  void IntHandlerDrvUsartInstance0(void)
 {
      if (!DRV_USART0_TransmitBufferIsFull()) {
