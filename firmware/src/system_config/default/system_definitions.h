@@ -67,6 +67,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "wifly_recv.h"
 #include "network_send.h"
 #include "network_recv.h"
+#include "processing.h"
 
 
 // DOM-IGNORE-BEGIN

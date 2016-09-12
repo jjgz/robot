@@ -58,6 +58,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "wifly_recv.h"
 #include "network_send.h"
 #include "network_recv.h"
+#include "processing.h"
 
 
 // *****************************************************************************
@@ -73,6 +74,7 @@ static void _WIFLY_SEND_Tasks(void);
 static void _WIFLY_RECV_Tasks(void);
 static void _NETWORK_SEND_Tasks(void);
 static void _NETWORK_RECV_Tasks(void);
+static void _PROCESSING_Tasks(void);
 
 
 // *****************************************************************************
@@ -116,6 +118,11 @@ void SYS_Tasks ( void )
                 "NETWORK_RECV Tasks",
                 1024, NULL, 1, NULL);
 
+    /* Create OS Thread for PROCESSING Tasks. */
+    xTaskCreate((TaskFunction_t) _PROCESSING_Tasks,
+                "PROCESSING Tasks",
+                1024, NULL, 1, NULL);
+
     /**************
      * Start RTOS * 
      **************/
@@ -142,7 +149,6 @@ static void _SYS_Tasks ( void)
         /* Maintain Middleware */
 
         /* Task Delay */
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -211,6 +217,23 @@ static void _NETWORK_RECV_Tasks(void)
     while(1)
     {
         NETWORK_RECV_Tasks();
+    }
+}
+
+
+/*******************************************************************************
+  Function:
+    void _PROCESSING_Tasks ( void )
+
+  Summary:
+    Maintains state machine of PROCESSING.
+*/
+
+static void _PROCESSING_Tasks(void)
+{
+    while(1)
+    {
+        PROCESSING_Tasks();
     }
 }
 

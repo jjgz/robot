@@ -1,4 +1,4 @@
-//DOM-IGNORE-BEGIN
+// DOM-IGNORE-BEGIN
 /*******************************************************************************
 Copyright (c) 2013-2014 released Microchip Technology Inc.  All rights reserved.
 
@@ -21,45 +21,18 @@ CONSEQUENTIAL DAMAGES, LOST PROFITS OR LOST DATA, COST OF PROCUREMENT OF
 SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
  *******************************************************************************/
-//DOM-IGNORE-END
+// DOM-IGNORE-END
 
-#ifndef _NETWORK_RECV_H
-#define _NETWORK_RECV_H
+#include "processing.h"
 
-// *****************************************************************************
-// *****************************************************************************
-// Section: Included Files
-// *****************************************************************************
-// *****************************************************************************
-
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include "system_config.h"
-#include "system_definitions.h"
-
-// DOM-IGNORE-BEGIN
-#ifdef __cplusplus  // Provide C++ Compatibility
-
-extern "C" {
-
-#endif
-// DOM-IGNORE-END 
-
-void NETWORK_RECV_Initialize();
-void NETWORK_RECV_Tasks();
-
-
-#endif /* _NETWORK_RECV_H */
-
-//DOM-IGNORE-BEGIN
-#ifdef __cplusplus
+void PROCESSING_Initialize() {
 }
-#endif
-//DOM-IGNORE-END
+
+void PROCESSING_Tasks() {
+}
+
+ 
 
 /*******************************************************************************
  End of File
  */
-

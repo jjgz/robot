@@ -23,8 +23,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
  *******************************************************************************/
 //DOM-IGNORE-END
 
-#ifndef _NETWORK_RECV_H
-#define _NETWORK_RECV_H
+#ifndef _PROCESSING_H
+#define _PROCESSING_H
 
 // *****************************************************************************
 // *****************************************************************************
@@ -47,11 +47,11 @@ extern "C" {
 #endif
 // DOM-IGNORE-END 
 
-void NETWORK_RECV_Initialize();
-void NETWORK_RECV_Tasks();
+void PROCESSING_Initialize();
+void PROCESSING_Tasks();
 
 
-#endif /* _NETWORK_RECV_H */
+#endif /* _PROCESSING_H */
 
 //DOM-IGNORE-BEGIN
 #ifdef __cplusplus

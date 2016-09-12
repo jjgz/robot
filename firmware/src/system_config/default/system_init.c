@@ -185,6 +185,7 @@ void SYS_Initialize ( void* data )
     WIFLY_RECV_Initialize();
     NETWORK_SEND_Initialize();
     NETWORK_RECV_Initialize();
+    PROCESSING_Initialize();
 }
 
 
