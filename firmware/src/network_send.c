@@ -24,6 +24,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "network_send.h"
+#include "cJSON/cJSON.h"
 
 #define NETWORK_SEND_QUEUE_LEN 64
 
@@ -43,7 +44,24 @@ void NETWORK_SEND_Tasks() {
         xQueueReceive(queue, &message, portMAX_DELAY);
         switch (message.type) {
             case NS_NETSTATS: {
-                // TODO: Serialize JSON from message.
+                MSGNetstats *netstats = &message.data.netstats;
+                cJSON *root, *netstats_json;
+                root = cJSON_CreateObject();
+                cJSON_AddItemToObject(root, "Netstats", netstats_json = cJSON_CreateObject());
+                cJSON_AddStringToObject(netstats_json, "myName", "Sensor");
+                cJSON_AddNumberToObject(netstats_json, "numGoodMessagesRecved", netstats->numGoodMessagesRecved);
+                cJSON_AddNumberToObject(netstats_json, "numCommErrors", netstats->numCommErrors);
+                cJSON_AddNumberToObject(netstats_json, "numJSONRequestsRecved", netstats->numJSONRequestsRecved);
+                cJSON_AddNumberToObject(netstats_json, "numJSONResponsesRecved", netstats->numJSONResponsesRecved);
+                cJSON_AddNumberToObject(netstats_json, "numJSONRequestsSent", netstats->numJSONRequestsSent);
+                cJSON_AddNumberToObject(netstats_json, "numJSONResponsesSent", netstats->numJSONResponsesSent);
+                char *s = cJSON_Print(root);
+                cJSON_Delete(root);
+
+                CharBuffer buffer;
+                buffer.length = strlen(s);
+                buffer.buff = s;
+                wifly_send_add_buffer(buffer);
             } break;
         }
     }

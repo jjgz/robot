@@ -24,6 +24,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "processing.h"
+#include "network_send.h"
 
 #define PROCESSING_QUEUE_LEN 32
 
