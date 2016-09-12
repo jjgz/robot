@@ -3,14 +3,9 @@
 
 #define INT_WIFLY_QUEUE_LEN 1
 
-typedef struct {
-    char *buff;
-    unsigned length;
-} WiflyQueueItem;
-
 QueueHandle_t queue;
 
-WiflyQueueItem current;
+CharBuffer current;
 unsigned current_pos;
 
 char *receive_buffer;
@@ -20,14 +15,11 @@ unsigned receive_buffer_len;
 void wifly_int_init() {
     current.buff = 0;
     receive_buffer = 0;
-    queue = xQueueCreate(INT_WIFLY_QUEUE_LEN, sizeof(WiflyQueueItem));
+    queue = xQueueCreate(INT_WIFLY_QUEUE_LEN, sizeof(CharBuffer));
 }
 
-void wifly_int_send(char *buff, unsigned length) {
-    WiflyQueueItem item;
-    item.buff = buff;
-    item.length = length;
-    xQueueSendToBack(queue, &item, portMAX_DELAY);
+void wifly_int_send(CharBuffer &buffer) {
+    xQueueSendToBack(queue, buffer, portMAX_DELAY);
 }
 
 WiflyIntCycle wifly_int_cycle() {
