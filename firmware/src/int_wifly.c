@@ -15,6 +15,7 @@ unsigned current_pos;
 
 char *receive_buffer;
 unsigned receive_buffer_pos;
+unsigned receive_buffer_len;
 
 void wifly_int_init() {
     current.buff = 0;
@@ -61,7 +62,15 @@ void wifly_int_acknowledge() {
 }
 
 void wifly_int_recv_byte(char byte) {
-    if(!receive_buffer_pos){
-        receive_buffer = (unsigned)malloc(sizeof());
+    if (!receive_buffer) {
+        receive_buffer_len = (unsigned)byte + 1;
+        receive_buffer_pos = 0;
+        receive_buffer = malloc(receive_buffer_len);
+    } else {
+        receive_buffer[receive_buffer_pos++] = byte;
+        if (receive_buffer_pos == receive_buffer_len) {
+            // TODO: Send buffer to wifly_recv.
+            receive_buffer = 0;
+        }
     }
 }
