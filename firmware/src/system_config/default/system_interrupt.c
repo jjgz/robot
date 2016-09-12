@@ -66,6 +66,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "network_send.h"
 #include "network_recv.h"
 #include "processing.h"
+#include "int_wifly.h"
 #include "system_definitions.h"
 
 // *****************************************************************************
@@ -74,15 +75,15 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 // *****************************************************************************
 
-char c = 'a';
  void IntHandlerDrvUsartInstance0(void)
 {
-     if (!DRV_USART0_TransmitBufferIsFull()) {
-         DRV_USART0_WriteByte(c);
-         c++;
-         if (c=='z')
-             c = 'a';
-     }
+    WiflyIntCycle cycle = wifly_int_cycle();
+    if (cycle.sending) {
+        if (!DRV_USART0_TransmitBufferIsFull()) {
+            DRV_USART0_WriteByte(cycle.item);
+            wifly_int_acknowledge();
+        }
+    }
     DRV_USART_TasksTransmit(sysObj.drvUsart0);
     DRV_USART_TasksReceive(sysObj.drvUsart0);
     DRV_USART_TasksError(sysObj.drvUsart0);
