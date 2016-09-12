@@ -25,9 +25,24 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "network_recv.h"
 
+#define NETWORK_RECV_QUEUE_LEN 1
+
+QueueHandle_t queue;
+
+void network_recv_add_buffer(CharBuffer buffer) {
+    xQueueSendToBack(queue, &buffer, portMAX_DELAY);
+}
+
 void NETWORK_RECV_Initialize() {
+    queue = xQueueCreate(NETWORK_RECV_QUEUE_LEN, sizeof(CharBuffer));
 }
 
 void NETWORK_RECV_Tasks() {
-    while (1) {}
+    while (1) {
+        CharBuffer buffer;
+        xQueueReceive(queue, &buffer, portMAX_DELAY);
+        // Parse the JSON into objects.
+        // TODO: Parse into JSON.
+        // TODO: Send to processing as correct object.
+    }
 }

@@ -68,7 +68,7 @@ extern "C" {
 #endif
 // DOM-IGNORE-END
 
-void wifly_recv_get_buffer_from_isr(CharBuffer buffer);
+void wifly_recv_add_buffer_from_isr(CharBuffer buffer);
 
 void WIFLY_RECV_Initialize();
 void WIFLY_RECV_Tasks();

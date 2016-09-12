@@ -1,20 +1,21 @@
 #include "int_wifly.h"
 #include "queue.h"
 
+#include "wifly_recv.h"
+
 #define INT_WIFLY_QUEUE_LEN 1
 
 QueueHandle_t queue;
 
-CharBuffer current;
-unsigned current_pos;
+CharBuffer send_buffer;
+unsigned send_buffer_pos;
 
-char *receive_buffer;
-unsigned receive_buffer_pos;
-unsigned receive_buffer_len;
+CharBuffer recv_buffer;
+unsigned recv_buffer_pos;
 
 void wifly_int_init() {
-    current.buff = 0;
-    receive_buffer = 0;
+    send_buffer.buff = 0;
+    recv_buffer.buff = 0;
     queue = xQueueCreate(INT_WIFLY_QUEUE_LEN, sizeof(CharBuffer));
 }
 
@@ -25,13 +26,13 @@ void wifly_int_send(CharBuffer buffer) {
 WiflyIntCycle wifly_int_cycle() {
     WiflyIntCycle cycle;
     // If we are not currently sending a buffer.
-    if (!current.buff) {
+    if (!send_buffer.buff) {
         BaseType_t higher_priority_task_woken = pdFALSE;
         // Attempt to receive a new buffer to send.
-        if (xQueueReceiveFromISR(queue, &current, &higher_priority_task_woken)) {
+        if (xQueueReceiveFromISR(queue, &send_buffer, &higher_priority_task_woken)) {
             cycle.sending = true;
-            cycle.item = current.buff[0];
-            current_pos = 0;
+            cycle.item = send_buffer.buff[0];
+            send_buffer_pos = 0;
             portEND_SWITCHING_ISR(higher_priority_task_woken);
         // We didn't receive a buffer.
         } else {
@@ -40,29 +41,29 @@ WiflyIntCycle wifly_int_cycle() {
     // We are still processing something.
     } else {
         cycle.sending = true;
-        cycle.item = current.buff[current_pos];
+        cycle.item = send_buffer.buff[send_buffer_pos];
     }
     return cycle;
 }
 
 void wifly_int_acknowledge() {
-    current_pos++;
-    if (current_pos == current.length) {
-        free(current.buff);
-        current.buff = 0;
+    send_buffer_pos++;
+    if (send_buffer_pos == send_buffer.length) {
+        free(send_buffer.buff);
+        send_buffer.buff = 0;
     }
 }
 
 void wifly_int_recv_byte(char byte) {
-    if (!receive_buffer) {
-        receive_buffer_len = (unsigned)byte + 1;
-        receive_buffer_pos = 0;
-        receive_buffer = malloc(receive_buffer_len);
+    if (!recv_buffer.buff) {
+        recv_buffer.length = (unsigned)byte + 1;
+        recv_buffer_pos = 0;
+        recv_buffer.buff = malloc(recv_buffer.length);
     } else {
-        receive_buffer[receive_buffer_pos++] = byte;
-        if (receive_buffer_pos == receive_buffer_len) {
-            // TODO: Send buffer to wifly_recv.
-            receive_buffer = 0;
+        recv_buffer.buff[recv_buffer_pos++] = byte;
+        if (recv_buffer_pos == recv_buffer.length) {
+            wifly_recv_add_buffer_from_isr(recv_buffer);
+            recv_buffer.buff = 0;
         }
     }
 }

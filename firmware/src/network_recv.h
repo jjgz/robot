@@ -38,6 +38,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include <stdlib.h>
 #include "system_config.h"
 #include "system_definitions.h"
+#include "buffer.h"
 
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
@@ -45,7 +46,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 extern "C" {
 
 #endif
-// DOM-IGNORE-END 
+// DOM-IGNORE-END
+
+void network_recv_add_buffer(CharBuffer buffer);
 
 void NETWORK_RECV_Initialize();
 void NETWORK_RECV_Tasks();
@@ -62,4 +65,3 @@ void NETWORK_RECV_Tasks();
 /*******************************************************************************
  End of File
  */
-

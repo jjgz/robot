@@ -24,12 +24,13 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "wifly_recv.h"
+#include "network_recv.h"
 
 #define WIFLY_RECV_QUEUE_LEN 32
 
 QueueHandle_t queue;
 
-void wifly_recv_get_buffer_from_isr(CharBuffer buffer) {
+void wifly_recv_add_buffer_from_isr(CharBuffer buffer) {
     BaseType_t higher_priority_task_woken = pdFALSE;
     // Attempt add the buffer from the isr to the queue.
     if (xQueueSendToBackFromISR(queue, &buffer, &higher_priority_task_woken)) {
@@ -48,6 +49,11 @@ void WIFLY_RECV_Initialize() {
 }
 
 void WIFLY_RECV_Tasks() {
-
-    while (1) {}
+    while (1) {
+        CharBuffer buffer;
+        xQueueReceive(queue, &buffer, portMAX_DELAY);
+        // TODO: Decide on UDP and TCP and add reliability handling for UDP or remove wifly_recv for TCP.
+        // Forward buffer to network_recv.
+        network_recv_add_buffer(buffer);
+    }
 }
