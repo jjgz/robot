@@ -24,10 +24,26 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "wifly_send.h"
+#include "int_wifly.h"
+
+#define WIFLY_SEND_QUEUE_LEN 32
+
+QueueHandle_t queue;
+
+void wifly_send_add_buffer(CharBuffer buffer) {
+    xQueueSendToBack(queue, &buffer, portMAX_DELAY);
+}
 
 void WIFLY_SEND_Initialize() {
+    queue = xQueueCreate(WIFLY_SEND_QUEUE_LEN, sizeof(CharBuffer));
 }
 
 void WIFLY_SEND_Tasks() {
-    while (1) {}
+    while (1) {
+        CharBuffer buffer;
+        xQueueReceive(queue, &buffer, portMAX_DELAY);
+        // TODO: Decide on UDP and TCP and add reliability handling for UDP or remove wifly_recv for TCP.
+        // Forward buffer to int_wifly.
+        wifly_int_send(buffer);
+    }
 }
