@@ -40,10 +40,17 @@ void NETWORK_RECV_Initialize() {
 
 void NETWORK_RECV_Tasks() {
     CharBuffer buffer;
+    NRMessage message;
     while (1) {
         xQueueReceive(queue, &buffer, portMAX_DELAY);
         // Parse the JSON into objects.
-        // TODO: Parse into JSON.
-        // TODO: Send to processing as correct object.
+        // TODO: Parse from JSON.
+        // Assume the object is a stat query.
+        message.type = NR_QUERY_STATS;
+        message.data.query_stats.dummy = 'd';
+        processing_add_recvmsg(&message);
+
+        // Free buffer.
+        free(buffer.buff);
     }
 }

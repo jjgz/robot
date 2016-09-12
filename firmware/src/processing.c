@@ -39,12 +39,29 @@ void PROCESSING_Initialize() {
 
 void PROCESSING_Tasks() {
     NRMessage message;
+
+    // Create netstats message.
+    NSMessage netstats_message;
+    netstats_message.type = NS_NETSTATS;
+    MSGNetstats *netstats = &netstats_message.data.netstats;
+    netstats->numGoodMessagesRecved = 0;
+    netstats->numCommErrors = 0;
+    netstats->numJSONRequestsRecved = 0;
+    netstats->numJSONResponsesRecved = 0;
+    netstats->numJSONRequestsSent = 0;
+    netstats->numJSONResponsesSent = 0;
+
     while (1) {
         xQueueReceive(queue, &message, portMAX_DELAY);
         switch (message.type) {
             case NR_QUERY_STATS: {
                 MSGQueryStats *stats = &message.data.query_stats;
-                // TODO: Send the query stats to network_send.
+                netstats->numGoodMessagesRecved++;
+                netstats->numJSONRequestsRecved++;
+                network_send_add_message(&netstats_message);
+
+                // We responded to a request, so we increase the responses sent.
+                netstats->numJSONResponsesSent++;
             } break;
         }
     }
