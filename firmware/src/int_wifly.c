@@ -18,8 +18,8 @@ void wifly_int_init() {
     queue = xQueueCreate(INT_WIFLY_QUEUE_LEN, sizeof(CharBuffer));
 }
 
-void wifly_int_send(CharBuffer &buffer) {
-    xQueueSendToBack(queue, buffer, portMAX_DELAY);
+void wifly_int_send(CharBuffer buffer) {
+    xQueueSendToBack(queue, &buffer, portMAX_DELAY);
 }
 
 WiflyIntCycle wifly_int_cycle() {

@@ -25,9 +25,15 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "wifly_recv.h"
 
+#define WIFLY_RECV_QUEUE_LEN 32
+
+QueueHandle_t queue;
+
 void WIFLY_RECV_Initialize() {
+    queue = xQueueCreate(WIFLY_RECV_QUEUE_LEN, sizeof(CharBuffer));
 }
 
 void WIFLY_RECV_Tasks() {
+    
     while (1) {}
 }
