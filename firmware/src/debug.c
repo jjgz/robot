@@ -45,7 +45,7 @@ const Pin val_pins[] = {
     {PORT_CHANNEL_D, PORTS_BIT_POS_1}, //port 0
     {PORT_CHANNEL_D, PORTS_BIT_POS_2}, //port 1
     {PORT_CHANNEL_A, PORTS_BIT_POS_6}, //port 80
-    {PORT_CHANNEL_A, PORTS_BIT_POS_7}, //port 81 
+    {PORT_CHANNEL_A, PORTS_BIT_POS_7}, //port 81
     {PORT_CHANNEL_G, PORTS_BIT_POS_14}, //port 82
     {PORT_CHANNEL_G, PORTS_BIT_POS_12}, //port 83
     {PORT_CHANNEL_G, PORTS_BIT_POS_13}, //port 84
@@ -54,7 +54,6 @@ const Pin val_pins[] = {
 
 void debug_val(unsigned char val) {
     int i;
-    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, val & 1);
     for (i = 0; i < 8; i++) {
         SYS_PORTS_PinWrite(0, val_pins[i].reg, val_pins[i].bit, (val >> i) & 1);
     }
