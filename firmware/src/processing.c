@@ -29,6 +29,7 @@ void PROCESSING_Initialize() {
 }
 
 void PROCESSING_Tasks() {
+    while (1) {}
 }
 
  

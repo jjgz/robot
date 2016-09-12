@@ -29,4 +29,5 @@ void NETWORK_SEND_Initialize() {
 }
 
 void NETWORK_SEND_Tasks() {
+    while (1) {}
 }

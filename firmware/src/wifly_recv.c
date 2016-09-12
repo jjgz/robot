@@ -29,4 +29,5 @@ void WIFLY_RECV_Initialize() {
 }
 
 void WIFLY_RECV_Tasks() {
+    while (1) {}
 }

@@ -29,4 +29,5 @@ void WIFLY_SEND_Initialize() {
 }
 
 void WIFLY_SEND_Tasks() {
+    while (1) {}
 }

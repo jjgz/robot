@@ -29,4 +29,5 @@ void NETWORK_RECV_Initialize() {
 }
 
 void NETWORK_RECV_Tasks() {
+    while (1) {}
 }
