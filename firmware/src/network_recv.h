@@ -39,6 +39,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system_config.h"
 #include "system_definitions.h"
 #include "buffer.h"
+#include "network_common.h"
 
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
@@ -48,11 +49,23 @@ extern "C" {
 #endif
 // DOM-IGNORE-END
 
+typedef enum {
+    NR_QUERY_STATS
+} NRType;
+
+typedef union {
+    MSGQueryStats query_stats;
+} NRUnion;
+
+typedef struct {
+    NRType type;
+    NRUnion data;
+} NRMessage;
+
 void network_recv_add_buffer(CharBuffer buffer);
 
 void NETWORK_RECV_Initialize();
 void NETWORK_RECV_Tasks();
-
 
 #endif /* _NETWORK_RECV_H */
 

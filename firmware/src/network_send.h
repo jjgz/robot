@@ -39,6 +39,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system_config.h"
 #include "system_definitions.h"
 #include "buffer.h"
+#include "network_common.h"
 
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
@@ -49,20 +50,11 @@ extern "C" {
 // DOM-IGNORE-END
 
 typedef enum {
-    NMSG_NETSTATS
+    NS_NETSTATS
 } NSType;
 
-typedef struct {
-    unsigned numGoodMessagesRecved;
-    unsigned numCommErrors;
-    unsigned numJSONRequestsRecved;
-    unsigned numJSONResponsesRecved;
-    unsigned numJSONRequestsSent;
-    unsigned numJSONResponsesSent;
-} NSNetstats;
-
 typedef union {
-    NSNetstats netstats;
+    MSGNetstats netstats;
 } NSUnion;
 
 typedef struct {

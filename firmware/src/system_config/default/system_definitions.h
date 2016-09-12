@@ -63,11 +63,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "FreeRTOS.h"
 #include "task.h"
-#include "wifly_send.h"
-#include "wifly_recv.h"
-#include "network_send.h"
-#include "network_recv.h"
-#include "processing.h"
 
 
 // DOM-IGNORE-BEGIN

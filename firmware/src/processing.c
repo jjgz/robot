@@ -25,14 +25,32 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "processing.h"
 
+#define PROCESSING_QUEUE_LEN 32
+
+QueueHandle_t queue;
+
+void processing_add_recvmsg(NRMessage *message) {
+    xQueueSendToBack(queue, message, portMAX_DELAY);
+}
+
 void PROCESSING_Initialize() {
+    queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
 }
 
 void PROCESSING_Tasks() {
-    while (1) {}
+    NRMessage message;
+    while (1) {
+        xQueueReceive(queue, &message, portMAX_DELAY);
+        switch (message.type) {
+            case NR_QUERY_STATS: {
+                MSGQueryStats *stats = &message.data.query_stats;
+                // TODO: Send the query stats to network_send.
+            } break;
+        }
+    }
 }
 
- 
+
 
 /*******************************************************************************
  End of File

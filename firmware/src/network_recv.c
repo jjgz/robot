@@ -24,6 +24,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "network_recv.h"
+#include "processing.h"
 
 #define NETWORK_RECV_QUEUE_LEN 1
 

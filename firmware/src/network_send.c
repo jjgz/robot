@@ -42,7 +42,7 @@ void NETWORK_SEND_Tasks() {
     while (1) {
         xQueueReceive(queue, &message, portMAX_DELAY);
         switch (message.type) {
-            case NMSG_NETSTATS: {
+            case NS_NETSTATS: {
                 // TODO: Serialize JSON from message.
             } break;
         }

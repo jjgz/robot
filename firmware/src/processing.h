@@ -39,17 +39,20 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system_config.h"
 #include "system_definitions.h"
 
+#include "network_recv.h"
+
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
 
 extern "C" {
 
 #endif
-// DOM-IGNORE-END 
+// DOM-IGNORE-END
+
+void processing_add_recvmsg(NRMessage *message);
 
 void PROCESSING_Initialize();
 void PROCESSING_Tasks();
-
 
 #endif /* _PROCESSING_H */
 
@@ -62,4 +65,3 @@ void PROCESSING_Tasks();
 /*******************************************************************************
  End of File
  */
-
