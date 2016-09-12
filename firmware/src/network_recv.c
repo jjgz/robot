@@ -38,8 +38,8 @@ void NETWORK_RECV_Initialize() {
 }
 
 void NETWORK_RECV_Tasks() {
+    CharBuffer buffer;
     while (1) {
-        CharBuffer buffer;
         xQueueReceive(queue, &buffer, portMAX_DELAY);
         // Parse the JSON into objects.
         // TODO: Parse into JSON.

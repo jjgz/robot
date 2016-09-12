@@ -25,9 +25,26 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "network_send.h"
 
+#define NETWORK_SEND_QUEUE_LEN 64
+
+QueueHandle_t queue;
+
+void network_send_add_message(NSMessage *message) {
+    xQueueSendToBack(queue, message, portMAX_DELAY);
+}
+
 void NETWORK_SEND_Initialize() {
+    queue = xQueueCreate(NETWORK_SEND_QUEUE_LEN, sizeof(NSMessage));
 }
 
 void NETWORK_SEND_Tasks() {
-    while (1) {}
+    NSMessage message;
+    while (1) {
+        xQueueReceive(queue, &message, portMAX_DELAY);
+        switch (message.type) {
+            case NMSG_NETSTATS: {
+                // TODO: Serialize JSON from message.
+            } break;
+        }
+    }
 }

@@ -38,6 +38,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include <stdlib.h>
 #include "system_config.h"
 #include "system_definitions.h"
+#include "buffer.h"
 
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
@@ -46,6 +47,30 @@ extern "C" {
 
 #endif
 // DOM-IGNORE-END
+
+typedef enum {
+    NMSG_NETSTATS
+} NSType;
+
+typedef struct {
+    unsigned numGoodMessagesRecved;
+    unsigned numCommErrors;
+    unsigned numJSONRequestsRecved;
+    unsigned numJSONResponsesRecved;
+    unsigned numJSONRequestsSent;
+    unsigned numJSONResponsesSent;
+} NSNetstats;
+
+typedef union {
+    NSNetstats netstats;
+} NSUnion;
+
+typedef struct {
+    NSType type;
+    NSUnion data;
+} NSMessage;
+
+void network_send_add_message(NSMessage *message);
 
 void NETWORK_SEND_Initialize();
 void NETWORK_SEND_Tasks();
@@ -62,4 +87,3 @@ void NETWORK_SEND_Tasks();
 /*******************************************************************************
  End of File
  */
-

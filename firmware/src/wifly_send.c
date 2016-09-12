@@ -39,8 +39,8 @@ void WIFLY_SEND_Initialize() {
 }
 
 void WIFLY_SEND_Tasks() {
+    CharBuffer buffer;
     while (1) {
-        CharBuffer buffer;
         xQueueReceive(queue, &buffer, portMAX_DELAY);
         // TODO: Decide on UDP and TCP and add reliability handling for UDP or remove wifly_recv for TCP.
         // Forward buffer to int_wifly.
