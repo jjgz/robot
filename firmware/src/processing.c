@@ -25,8 +25,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "processing.h"
 #include "network_send.h"
+#include "debug.h"
 
-#define PROCESSING_QUEUE_LEN 32
+#define PROCESSING_QUEUE_LEN 1
 
 QueueHandle_t queue;
 
@@ -39,6 +40,7 @@ void PROCESSING_Initialize() {
 }
 
 void PROCESSING_Tasks() {
+    debug_loc(DEBUG_PROCESSING_ENTER);
     NRMessage message;
 
     // Create netstats message.
@@ -52,8 +54,15 @@ void PROCESSING_Tasks() {
     netstats->numJSONRequestsSent = 0;
     netstats->numJSONResponsesSent = 0;
 
+    debug_loc(DEBUG_PROCESSING_WHILE);
     while (1) {
-        xQueueReceive(queue, &message, portMAX_DELAY);
+        netstats->numGoodMessagesRecved++;
+        netstats->numJSONRequestsRecved++;
+        network_send_add_message(&netstats_message);
+
+        // We responded to a request, so we increase the responses sent.
+        netstats->numJSONResponsesSent++;
+        /*xQueueReceive(queue, &message, portMAX_DELAY);
         switch (message.type) {
             case NR_QUERY_STATS: {
                 MSGQueryStats *stats = &message.data.query_stats;
@@ -64,7 +73,7 @@ void PROCESSING_Tasks() {
                 // We responded to a request, so we increase the responses sent.
                 netstats->numJSONResponsesSent++;
             } break;
-        }
+        }*/
     }
 }
 

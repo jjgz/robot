@@ -61,6 +61,7 @@ void debug_val(unsigned char val) {
 
 void debug_loc(DebugLocation loc) {
     int i;
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_0, 1);
     for (i = 0; i < 8; i++) {
         SYS_PORTS_PinWrite(0, loc_pins[i].reg, loc_pins[i].bit, (loc >> i) & 1);
     }

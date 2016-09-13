@@ -1,7 +1,7 @@
 #include "int_wifly.h"
 #include "queue.h"
-
-#include "wifly_recv.h"
+#include "network_recv.h"
+#include "debug.h"
 
 #define INT_WIFLY_QUEUE_LEN 1
 
@@ -62,7 +62,7 @@ void wifly_int_recv_byte(char byte) {
     } else {
         recv_buffer.buff[recv_buffer_pos++] = byte;
         if (recv_buffer_pos == recv_buffer.length) {
-            wifly_recv_add_buffer_from_isr(recv_buffer);
+            network_recv_add_buffer_from_isr(recv_buffer);
             recv_buffer.buff = 0;
         }
     }

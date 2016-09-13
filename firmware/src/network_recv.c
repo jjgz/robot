@@ -25,13 +25,27 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "network_recv.h"
 #include "processing.h"
+#include "debug.h"
 
-#define NETWORK_RECV_QUEUE_LEN 1
+#define NETWORK_RECV_QUEUE_LEN 16
 
 QueueHandle_t queue;
 
-void network_recv_add_buffer(CharBuffer buffer) {
-    xQueueSendToBack(queue, &buffer, portMAX_DELAY);
+void network_recv_add_buffer_from_isr(CharBuffer buffer) {
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    // Attempt add the buffer from the isr to the queue.
+    if (xQueueSendToBackFromISR(queue, &buffer, &higher_priority_task_woken)) {
+        // If a higher priority task was waiting for something on the queue, switch to it.
+        portEND_SWITCHING_ISR(higher_priority_task_woken);
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+    // We didn't receive a buffer.
+    } else {
+        // Indicate on LD4 that we lost a packet.
+        // NOTE: LD4 conflicts with SDA2 (I2C).
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+        free(buffer.buff);
+    }
 }
 
 void NETWORK_RECV_Initialize() {
@@ -39,10 +53,14 @@ void NETWORK_RECV_Initialize() {
 }
 
 void NETWORK_RECV_Tasks() {
+    debug_loc(DEBUG_NETRECV_ENTER);
     CharBuffer buffer;
     NRMessage message;
+    debug_loc(DEBUG_NETRECV_WHILE);
     while (1) {
+        debug_loc(DEBUG_NETRECV_BEFORE_RECV);
         xQueueReceive(queue, &buffer, portMAX_DELAY);
+        debug_loc(DEBUG_NETRECV_AFTER_RECV);
         // Parse the JSON into objects.
         // TODO: Parse from JSON.
         // Assume the object is a stat query.

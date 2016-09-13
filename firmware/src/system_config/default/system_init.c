@@ -181,8 +181,6 @@ void SYS_Initialize ( void* data )
 
 
     /* Initialize the Application */
-    WIFLY_SEND_Initialize();
-    WIFLY_RECV_Initialize();
     NETWORK_SEND_Initialize();
     NETWORK_RECV_Initialize();
     PROCESSING_Initialize();
