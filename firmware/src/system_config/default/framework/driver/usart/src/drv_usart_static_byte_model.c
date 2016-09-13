@@ -69,22 +69,9 @@ extern DRV_USART_OBJ  gDrvUSART0Obj ;
 uint8_t DRV_USART0_ReadByte(void)
 {
     uint8_t readValue;
-	
-    /* This function needs to be thread safe */
-    if(OSAL_MUTEX_Lock(&(gDrvUSART0Obj.mutexDriverInstance), OSAL_WAIT_FOREVER) == OSAL_RESULT_TRUE)
-    {
-        /* We were able to take the mutex */
-    }
-    else
-    {
-        SYS_DEBUG_MESSAGE(SYS_ERROR_DEBUG, "\r\nUSART Driver: Hardware Instance Mutex Time out in DRV_USART_ReadByte() function");
-        return 0;
-    }
 
     /* Receive one byte */
     readValue = PLIB_USART_ReceiverByteReceive(USART_ID_1);
-
-    OSAL_MUTEX_Unlock(&(gDrvUSART0Obj.mutexDriverInstance));
 
 
     return readValue;

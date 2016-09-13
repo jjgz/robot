@@ -24,20 +24,22 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "network_send.h"
-#include "cJSON/cJSON.h"
 #include "int_wifly.h"
 #include "debug.h"
 
 #define NETWORK_SEND_QUEUE_LEN 2
 
-QueueHandle_t queue;
+QueueHandle_t network_send_queue;
+
+char alpha;
 
 void network_send_add_message(NSMessage *message) {
-    xQueueSendToBack(queue, message, portMAX_DELAY);
+    xQueueSendToBack(network_send_queue, message, portMAX_DELAY);
 }
 
 void NETWORK_SEND_Initialize() {
-    queue = xQueueCreate(NETWORK_SEND_QUEUE_LEN, sizeof(NSMessage));
+    network_send_queue = xQueueCreate(NETWORK_SEND_QUEUE_LEN, sizeof(NSMessage));
+    alpha = 'a';
 }
 
 unsigned count_length_json(char *str) {
@@ -59,6 +61,13 @@ unsigned count_length_json(char *str) {
 }
 
 void NETWORK_SEND_Tasks() {
+    while (1) {
+    wifly_int_send(alpha);
+    alpha++;
+            if (alpha == 'z' + 1)
+                alpha = 'a';
+    }
+    /*
     debug_loc(DEBUG_NETSEND_ENTER);
     NSMessage message;
     debug_loc(DEBUG_NETSEND_WHILE);
@@ -68,7 +77,8 @@ void NETWORK_SEND_Tasks() {
         debug_loc(DEBUG_NETSEND_AFTER_RECV);
         switch (message.type) {
             case NS_NETSTATS: {
-                /*
+                MSGNetstats *netstats = &message.data.netstats;
+                
                 CharBuffer buffer;
                 MSGNetstats *netstats = &message.data.netstats;
                 debug_loc(DEBUG_NETSEND_BEFORE_PARSE);
@@ -91,10 +101,16 @@ void NETWORK_SEND_Tasks() {
                 memcpy(buffer.buff, s, buffer.length);
                 cJSON_Delete(root);
 
+                debug_loc(DEBUG_NETSEND_AFTER_SEND);
+                
+                CharBuffer buffer;
+                buffer.length = strlen(cst);
+                strcpy(buffer.buff, cst);
+
                 debug_loc(DEBUG_NETSEND_BEFORE_SEND);
-                wifly_int_send(buffer);
-                */
+                wifly_int_send(&buffer);
             } break;
         }
     }
+    */
 }

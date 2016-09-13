@@ -26,6 +26,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "processing.h"
 #include "network_send.h"
 #include "debug.h"
+#include "int_wifly.h"
 
 #define PROCESSING_QUEUE_LEN 1
 
@@ -37,6 +38,7 @@ void processing_add_recvmsg(NRMessage *message) {
 
 void PROCESSING_Initialize() {
     queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
+    wifly_int_init();
 }
 
 void PROCESSING_Tasks() {
@@ -56,19 +58,20 @@ void PROCESSING_Tasks() {
 
     debug_loc(DEBUG_PROCESSING_WHILE);
     while (1) {
-        netstats->numGoodMessagesRecved++;
-        netstats->numJSONRequestsRecved++;
-        network_send_add_message(&netstats_message);
-
         // We responded to a request, so we increase the responses sent.
         netstats->numJSONResponsesSent++;
+        debug_loc(DEBUG_PROCESSING_BEFORE_SEND);
+        network_send_add_message(&netstats_message);
+        debug_loc(DEBUG_PROCESSING_AFTER_SEND);
         /*xQueueReceive(queue, &message, portMAX_DELAY);
         switch (message.type) {
             case NR_QUERY_STATS: {
                 MSGQueryStats *stats = &message.data.query_stats;
                 netstats->numGoodMessagesRecved++;
                 netstats->numJSONRequestsRecved++;
+                //debug_loc(DEBUG_PROCESSING_BEFORE_SEND);
                 network_send_add_message(&netstats_message);
+                //debug_loc(DEBUG_PROCESSING_AFTER_SEND);
 
                 // We responded to a request, so we increase the responses sent.
                 netstats->numJSONResponsesSent++;
