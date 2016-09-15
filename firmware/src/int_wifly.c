@@ -121,6 +121,7 @@ void wifly_int_recv_byte(char byte) {
     }
 }
 
+// TODO: Credit: https://chromium.googlesource.com/chromiumos/platform/vboot_reference/+/master/firmware/lib/crc8.c
 void wifly_int_crc(uint8_t byte){
 	uint8_t i;
     crc ^= (byte << 8);
