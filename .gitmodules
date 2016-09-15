@@ -1,0 +1,3 @@
+[submodule "firmware/src/cJSON"]
+	path = firmware/src/cJSON
+	url = https://github.com/jjgz/cJSON
