@@ -34,6 +34,8 @@ QueueHandle_t network_send_queue;
 
 char alpha;
 
+const char *netmsg = "{\"Netstats\":{\"myName\":\"Sensor\",\"numGoodMessagesRecved\":0,\"numCommErrors\":0,\"numJSONRequestsRecved\":0,\"numJSONResponsesRecved\":0,\"numJSONRequestsSent\":0,\"numJSONResponsesSent\":0}}";
+
 void network_send_add_message(NSMessage *message) {
     xQueueSendToBack(network_send_queue, message, portMAX_DELAY);
 }
@@ -54,7 +56,7 @@ void NETWORK_SEND_Tasks() {
         switch (message.type) {
             case NS_NETSTATS: {
                 MSGNetstats *netstats = &message.data.netstats;
-                debug_loc(DEBUG_NETSEND_BEFORE_PARSE);
+                /*debug_loc(DEBUG_NETSEND_BEFORE_PARSE);
                 cJSON *root, *netstats_json;
                 root = cJSON_CreateObject();
                 cJSON_AddItemToObject(root, "Netstats", netstats_json = cJSON_CreateObject());
@@ -66,13 +68,23 @@ void NETWORK_SEND_Tasks() {
                 cJSON_AddNumberToObject(netstats_json, "numJSONRequestsSent", netstats->numJSONRequestsSent);
                 cJSON_AddNumberToObject(netstats_json, "numJSONResponsesSent", netstats->numJSONResponsesSent);
                 char *cst = cJSON_PrintUnformatted(root);
-                cJSON_Delete(root);
+                cJSON_Delete(root);*/
                 
+                //CharBuffer buffer = buffer_new(strlen(netmsg));
                 CharBuffer buffer;
-                buffer.buff = cst;
-                buffer.length = strlen(cst);
+                buffer.buff = (char*)netmsg;
+                buffer.length = strlen(netmsg);
+                //strcpy(buffer.buff, netmsg);
                 
-                wifly_int_send(&buffer);
+                int i;
+                for (i = 0; i < buffer.length; i++) {
+                    while (1) {
+                        if (!DRV_USART0_TransmitBufferIsFull()) {
+                            DRV_USART0_WriteByte(buffer.buff[i]);
+                            break;
+                        }
+                    }
+                }
             } break;
         }
     }

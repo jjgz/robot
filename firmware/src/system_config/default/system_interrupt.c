@@ -79,25 +79,14 @@ char sendthing;
 
  void IntHandlerDrvUsartInstance0(void)
 {
-    debug_loc(DEBUG_INTWIFLY_ENTER);
-    WiflyIntCycle cycle = wifly_int_cycle();
-    if (cycle.sending) {
-        if (!DRV_USART0_TransmitBufferIsFull()) {
-            debug_loc(DEBUG_INTWIFLY_WRITEBYTE);
-            DRV_USART0_WriteByte(cycle.item);
-            wifly_int_acknowledge_send();
-        }
-    }
-
     if (!DRV_USART0_ReceiverBufferIsEmpty()){
-        debug_loc(DEBUG_INTWIFLY_READBYTE);
         wifly_int_recv_byte(DRV_USART0_ReadByte());
+        DRV_USART0_ReadByte();
     }
     
     DRV_USART_TasksTransmit(sysObj.drvUsart0);
     DRV_USART_TasksReceive(sysObj.drvUsart0);
     DRV_USART_TasksError(sysObj.drvUsart0);
-    debug_loc(DEBUG_INTWIFLY_LEAVE);
 }
   
 /*******************************************************************************

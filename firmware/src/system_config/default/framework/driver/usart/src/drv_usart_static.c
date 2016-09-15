@@ -112,7 +112,7 @@ SYS_MODULE_OBJ DRV_USART0_Initialize(void)
     /* Set the baud rate and enable the USART */
     PLIB_USART_BaudSetAndEnable(USART_ID_1,
             clockSource,
-            9600);  /*Desired Baud rate value*/
+            57600);  /*Desired Baud rate value*/
 
     /* Clear the interrupts to be on the safer side*/
     SYS_INT_SourceStatusClear(INT_SOURCE_USART_1_TRANSMIT);

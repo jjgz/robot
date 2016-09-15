@@ -37,11 +37,13 @@ void processing_add_recvmsg(NRMessage *message) {
 }
 
 void PROCESSING_Initialize() {
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 0);
     queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
     wifly_int_init();
 }
 
 void PROCESSING_Tasks() {
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 0);
     debug_loc(DEBUG_PROCESSING_ENTER);
     NRMessage message;
 
@@ -58,18 +60,28 @@ void PROCESSING_Tasks() {
 
     debug_loc(DEBUG_PROCESSING_WHILE);
     while (1) {
+        debug_loc(DEBUG_PROCESSING_BEFORE_SEND);
+        network_send_add_message(&netstats_message);
+        debug_loc(DEBUG_PROCESSING_AFTER_SEND);
+
+        // We responded to a request, so we increase the responses sent.
+        netstats->numJSONResponsesSent++;
+        /*debug_loc(DEBUG_PROCESSING_BEFORE_RECV);
         xQueueReceive(queue, &message, portMAX_DELAY);
+        debug_loc(DEBUG_PROCESSING_AFTER_RECV);
         switch (message.type) {
             case NR_QUERY_STATS: {
                 MSGQueryStats *stats = &message.data.query_stats;
                 netstats->numGoodMessagesRecved++;
                 netstats->numJSONRequestsRecved++;
+                debug_loc(DEBUG_PROCESSING_BEFORE_SEND);
                 network_send_add_message(&netstats_message);
+                debug_loc(DEBUG_PROCESSING_AFTER_SEND);
 
                 // We responded to a request, so we increase the responses sent.
                 netstats->numJSONResponsesSent++;
             } break;
-        }
+        }*/
     }
 }
 

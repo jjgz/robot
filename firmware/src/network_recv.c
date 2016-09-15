@@ -27,7 +27,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "processing.h"
 #include "debug.h"
 
-#define NETWORK_RECV_QUEUE_LEN 16
+#define NETWORK_RECV_QUEUE_LEN 1
 
 QueueHandle_t network_recv_queue;
 
@@ -63,9 +63,9 @@ void NETWORK_RECV_Tasks() {
         // Parse the JSON into objects.
         // TODO: Parse from JSON.
         // Assume the object is a stat query.
-        message.type = NR_QUERY_STATS;
+        /*message.type = NR_QUERY_STATS;
         message.data.query_stats.dummy = 'd';
-        processing_add_recvmsg(&message);
+        processing_add_recvmsg(&message);*/
         // Free the buffer we got.
         buffer_free(&buffer);
     }
