@@ -6,7 +6,4 @@ typedef struct {
     unsigned length;
 } CharBuffer;
 
-CharBuffer buffer_new(unsigned length);
-void buffer_free(CharBuffer *buffer);
-
 #endif

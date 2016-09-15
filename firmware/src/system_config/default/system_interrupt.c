@@ -80,8 +80,7 @@ char sendthing;
  void IntHandlerDrvUsartInstance0(void)
 {
     if (!DRV_USART0_ReceiverBufferIsEmpty()){
-        //wifly_int_recv_byte(DRV_USART0_ReadByte());
-        DRV_USART0_ReadByte();
+        wifly_int_recv_byte(DRV_USART0_ReadByte());
     }
     
     DRV_USART_TasksTransmit(sysObj.drvUsart0);

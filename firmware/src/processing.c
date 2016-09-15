@@ -44,7 +44,6 @@ void PROCESSING_Initialize() {
 
 void PROCESSING_Tasks() {
     SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 0);
-    debug_loc(DEBUG_PROCESSING_ENTER);
     NRMessage message;
 
     // Create netstats message.
@@ -58,11 +57,8 @@ void PROCESSING_Tasks() {
     netstats->numJSONRequestsSent = 0;
     netstats->numJSONResponsesSent = 0;
 
-    debug_loc(DEBUG_PROCESSING_WHILE);
     while (1) {
-        debug_loc(DEBUG_PROCESSING_BEFORE_SEND);
         network_send_add_message(&netstats_message);
-        debug_loc(DEBUG_PROCESSING_AFTER_SEND);
 
         // We responded to a request, so we increase the responses sent.
         netstats->numJSONResponsesSent++;

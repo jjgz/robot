@@ -46,17 +46,12 @@ void NETWORK_SEND_Initialize() {
 }
 
 void NETWORK_SEND_Tasks() {
-    debug_loc(DEBUG_NETSEND_ENTER);
     NSMessage message;
-    debug_loc(DEBUG_NETSEND_WHILE);
     while (1) {
-        debug_loc(DEBUG_NETSEND_BEFORE_RECV);
         xQueueReceive(network_send_queue, &message, portMAX_DELAY);
-        debug_loc(DEBUG_NETSEND_AFTER_RECV);
         switch (message.type) {
             case NS_NETSTATS: {
                 MSGNetstats *netstats = &message.data.netstats;
-                /*debug_loc(DEBUG_NETSEND_BEFORE_PARSE);
                 cJSON *root, *netstats_json;
                 root = cJSON_CreateObject();
                 cJSON_AddItemToObject(root, "Netstats", netstats_json = cJSON_CreateObject());
@@ -68,13 +63,11 @@ void NETWORK_SEND_Tasks() {
                 cJSON_AddNumberToObject(netstats_json, "numJSONRequestsSent", netstats->numJSONRequestsSent);
                 cJSON_AddNumberToObject(netstats_json, "numJSONResponsesSent", netstats->numJSONResponsesSent);
                 char *cst = cJSON_PrintUnformatted(root);
-                cJSON_Delete(root);*/
+                cJSON_Delete(root);
                 
-                //CharBuffer buffer = buffer_new(strlen(netmsg));
                 CharBuffer buffer;
                 buffer.buff = (char*)netmsg;
                 buffer.length = strlen(netmsg);
-                //strcpy(buffer.buff, netmsg);
                 
                 int i;
                 for (i = 0; i < buffer.length; i++) {
@@ -85,6 +78,8 @@ void NETWORK_SEND_Tasks() {
                         }
                     }
                 }
+                
+                free(cst);
             } break;
         }
     }

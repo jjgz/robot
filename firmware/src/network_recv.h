@@ -62,7 +62,7 @@ typedef struct {
     NRUnion data;
 } NRMessage;
 
-void network_recv_add_buffer_from_isr(CharBuffer *buffer);
+bool network_recv_add_buffer_from_isr(CharBuffer *buffer);
 
 void NETWORK_RECV_Initialize();
 void NETWORK_RECV_Tasks();
