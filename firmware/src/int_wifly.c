@@ -16,12 +16,12 @@ unsigned recv_buffer_pos;
 unsigned sequence_counter;
 const char sequence_buffer[] = {128, 37, 35, 36};
 uint8_t crc, crc_byte;
-typedef enum {INIT, CRC, LENGTH, MSG} SEQUENCE_STATE;
+typedef enum {SEQ_INIT, SEQ_CRC, SEQ_LENGTH, SEQ_MSG} SEQUENCE_STATE;
 SEQUENCE_STATE sequence_state;
 
 void wifly_int_crc(uint8_t byte);
 void wifly_int_init() {
-    sequence_state = CRC;
+    sequence_state = SEQ_CRC;
     crc = 0;
     sequence_counter = 0;
     send_buffer.buff = 0;
@@ -71,44 +71,49 @@ void wifly_int_acknowledge_send() {
 
 void wifly_int_recv_byte(char byte) {
     //check if the sequence bytes match...should count up to 4
-    if(sequence_buffer[sequence_counter] == byte){
-        if(sequence_state == MSG)
-            free(recv_buffer.buff);
+    if (sequence_buffer[sequence_counter] == byte) {
+        if (sequence_state == SEQ_MSG)
+            buffer_free(&recv_buffer);
         sequence_counter++;
-    }
-    else{
-        sequence_counter = 0;
-    }
-    if(sequence_counter == 4){
-        sequence_state = CRC;
+    } else if (sequence_buffer[0] == byte) {
+        sequence_counter = 1;
+    } else {
         sequence_counter = 0;
     }
     
-    switch(sequence_state){
-        case INIT:
-            sequence_state = INIT;
+    if (sequence_counter == 4) {
+        sequence_state = SEQ_CRC;
+        sequence_counter = 0;
+    }
+    
+    switch (sequence_state) {
+        case SEQ_INIT:
+            sequence_state = SEQ_INIT;
             break;
-        case CRC:
+        case SEQ_CRC:
             crc = 0; 
             crc_byte = byte;
-            sequence_state = LENGTH;
+            sequence_state = SEQ_LENGTH;
             break;
-        case LENGTH:        
+        case SEQ_LENGTH:
             wifly_int_crc(byte);
-            if (!recv_buffer.buff) {
-                recv_buffer = buffer_new((unsigned)byte + 1);
-                recv_buffer_pos = 0;
-            }        
-            sequence_state = MSG;
+            recv_buffer = buffer_new((unsigned)byte + 1);
+            recv_buffer_pos = 0;
+            sequence_state = SEQ_MSG;
             break;
-        case MSG:
+        case SEQ_MSG:
             wifly_int_crc(byte);
             recv_buffer.buff[recv_buffer_pos++] = byte;
-            if (recv_buffer_pos == recv_buffer.length){
-                network_recv_add_buffer_from_isr(&recv_buffer);
-                recv_buffer.buff = 0;
-                sequence_state = INIT;
-            } 
+            if (recv_buffer_pos == recv_buffer.length) {
+                if (crc == crc_byte) {
+                    network_recv_add_buffer_from_isr(&recv_buffer);
+                // We received bad data.
+                } else {
+                    // TODO: Send a message to indicate a packet loss.
+                    buffer_free(&recv_buffer);
+                }
+                sequence_state = SEQ_INIT;
+            }
             break;
         default:
             SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
