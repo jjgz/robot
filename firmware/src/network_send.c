@@ -26,6 +26,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "network_send.h"
 #include "int_wifly.h"
 #include "debug.h"
+#include "cJSON/cJSON.h"
 
 #define NETWORK_SEND_QUEUE_LEN 2
 
@@ -42,44 +43,16 @@ void NETWORK_SEND_Initialize() {
     alpha = 'a';
 }
 
-unsigned count_length_json(char *str) {
-    unsigned counter = 0;
-    char *current = str;
-    while (1) {
-        if (*current == '{') {
-            counter++;
-        } else if (*current == '}') {
-            if (counter == 1)
-                return current - str + 1;
-            if (counter == 0)
-                return 0;
-            counter--;
-        }
-        
-        current++;
-    }
-}
-
 void NETWORK_SEND_Tasks() {
-    while (1) {
-    wifly_int_send(alpha);
-    alpha++;
-            if (alpha == 'z' + 1)
-                alpha = 'a';
-    }
-    /*
     debug_loc(DEBUG_NETSEND_ENTER);
     NSMessage message;
     debug_loc(DEBUG_NETSEND_WHILE);
     while (1) {
         debug_loc(DEBUG_NETSEND_BEFORE_RECV);
-        xQueueReceive(queue, &message, portMAX_DELAY);
+        xQueueReceive(network_send_queue, &message, portMAX_DELAY);
         debug_loc(DEBUG_NETSEND_AFTER_RECV);
         switch (message.type) {
             case NS_NETSTATS: {
-                MSGNetstats *netstats = &message.data.netstats;
-                
-                CharBuffer buffer;
                 MSGNetstats *netstats = &message.data.netstats;
                 debug_loc(DEBUG_NETSEND_BEFORE_PARSE);
                 cJSON *root, *netstats_json;
@@ -92,25 +65,16 @@ void NETWORK_SEND_Tasks() {
                 cJSON_AddNumberToObject(netstats_json, "numJSONResponsesRecved", netstats->numJSONResponsesRecved);
                 cJSON_AddNumberToObject(netstats_json, "numJSONRequestsSent", netstats->numJSONRequestsSent);
                 cJSON_AddNumberToObject(netstats_json, "numJSONResponsesSent", netstats->numJSONResponsesSent);
-                debug_loc(DEBUG_NETSEND_BEFORE_STRING);
-                char *s = cJSON_PrintUnformatted(root);
-                debug_loc((unsigned)s);
-                buffer.length = count_length_json(s);
-                debug_loc(DEBUG_NETSEND_AFTER_STRLEN);
-                buffer.buff = s;
-                memcpy(buffer.buff, s, buffer.length);
+                char *cst = cJSON_PrintUnformatted(root);
                 cJSON_Delete(root);
-
-                debug_loc(DEBUG_NETSEND_AFTER_SEND);
                 
                 CharBuffer buffer;
+                buffer.buff = cst;
                 buffer.length = strlen(cst);
-                strcpy(buffer.buff, cst);
-
-                debug_loc(DEBUG_NETSEND_BEFORE_SEND);
+                
                 wifly_int_send(&buffer);
             } break;
         }
     }
-    */
+    
 }

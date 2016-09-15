@@ -85,6 +85,7 @@ char sendthing;
         if (!DRV_USART0_TransmitBufferIsFull()) {
             debug_loc(DEBUG_INTWIFLY_WRITEBYTE);
             DRV_USART0_WriteByte(cycle.item);
+            wifly_int_acknowledge_send();
         }
     }
 

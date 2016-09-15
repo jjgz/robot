@@ -58,25 +58,18 @@ void PROCESSING_Tasks() {
 
     debug_loc(DEBUG_PROCESSING_WHILE);
     while (1) {
-        // We responded to a request, so we increase the responses sent.
-        netstats->numJSONResponsesSent++;
-        debug_loc(DEBUG_PROCESSING_BEFORE_SEND);
-        network_send_add_message(&netstats_message);
-        debug_loc(DEBUG_PROCESSING_AFTER_SEND);
-        /*xQueueReceive(queue, &message, portMAX_DELAY);
+        xQueueReceive(queue, &message, portMAX_DELAY);
         switch (message.type) {
             case NR_QUERY_STATS: {
                 MSGQueryStats *stats = &message.data.query_stats;
                 netstats->numGoodMessagesRecved++;
                 netstats->numJSONRequestsRecved++;
-                //debug_loc(DEBUG_PROCESSING_BEFORE_SEND);
                 network_send_add_message(&netstats_message);
-                //debug_loc(DEBUG_PROCESSING_AFTER_SEND);
 
                 // We responded to a request, so we increase the responses sent.
                 netstats->numJSONResponsesSent++;
             } break;
-        }*/
+        }
     }
 }
 
