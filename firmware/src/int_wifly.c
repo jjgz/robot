@@ -15,7 +15,7 @@ unsigned recv_buffer_pos;
 
 unsigned sequence_counter;
 const char sequence_buffer[] = {128, 37, 35, 36};
-uint8_t crc, crc_byte;
+uint16_t crc, crc_byte;
 typedef enum {SEQ_INIT, SEQ_CRC, SEQ_LENGTH, SEQ_MSG} SEQUENCE_STATE;
 SEQUENCE_STATE sequence_state;
 
@@ -105,7 +105,7 @@ void wifly_int_recv_byte(char byte) {
             wifly_int_crc(byte);
             recv_buffer.buff[recv_buffer_pos++] = byte;
             if (recv_buffer_pos == recv_buffer.length) {
-                if (crc == crc_byte) {
+                if ((crc >> 8) == crc_byte) {
                     network_recv_add_buffer_from_isr(&recv_buffer);
                 // We received bad data.
                 } else {
@@ -122,13 +122,13 @@ void wifly_int_recv_byte(char byte) {
 }
 
 // TODO: Credit: https://chromium.googlesource.com/chromiumos/platform/vboot_reference/+/master/firmware/lib/crc8.c
-void wifly_int_crc(uint8_t byte){
+void wifly_int_crc(uint8_t byte) {
 	uint8_t i;
-    crc ^= (byte << 8);
-	for(i = 8; i; i--) {
+    uint16_t ibyte = byte;
+    crc ^= (ibyte << 8);
+	for (i = 8; i; i--) {
 		if (crc & 0x8000)
 			crc ^= (0x1070 << 3);
 		crc <<= 1;
 	}
-	
 }
