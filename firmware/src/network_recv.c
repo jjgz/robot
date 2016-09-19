@@ -50,6 +50,7 @@ bool network_recv_add_buffer_from_isr(CharBuffer *buffer) {
 
 void NETWORK_RECV_Initialize() {
     network_recv_queue = xQueueCreate(NETWORK_RECV_QUEUE_LEN, sizeof(CharBuffer));
+    wifly_int_init();
 }
 
 void NETWORK_RECV_Tasks() {

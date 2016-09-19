@@ -2,6 +2,9 @@
 #include "queue.h"
 #include "network_recv.h"
 #include "debug.h"
+#include "peripheral/usart/processor/usart_p32mx795f512l.h"
+
+#define INT_WIFLY_QUEUE_LEN 2
 
 CharBuffer send_buffer;
 unsigned send_buffer_pos;
@@ -18,13 +21,64 @@ SEQUENCE_STATE sequence_state;
 char global_buffers[16][256];
 unsigned global_buffer_ring_pos;
 
+QueueHandle_t int_wifly_queue;
+
 void wifly_int_crc(uint8_t byte);
 void wifly_int_init() {
     sequence_state = SEQ_CRC;
     crc = 0;
     sequence_counter = 0;
     recv_buffer.buff = 0;
+    send_buffer.buff = 0;
     global_buffer_ring_pos = 0;
+    int_wifly_queue = xQueueCreate(INT_WIFLY_QUEUE_LEN, sizeof(CharBuffer));
+    U1STAbits.UTXISEL1 = 0;
+    U1STAbits.UTXISEL0 = 1;
+    SYS_INT_SourceEnable(INT_SOURCE_USART_1_RECEIVE);
+}
+
+void wifly_int_send_buffer(CharBuffer *buffer) {
+    xQueueSendToBack(int_wifly_queue, buffer, portMAX_DELAY);
+    SYS_INT_SourceEnable(INT_SOURCE_USART_1_TRANSMIT);
+}
+
+WiflyIntCycle wifly_int_cycle() {
+    WiflyIntCycle cycle;
+    // If we are not currently sending a buffer.
+    if (!send_buffer.buff) {
+        BaseType_t higher_priority_task_woken = pdFALSE;
+        // Attempt to receive a new buffer to send.
+        if (xQueueReceiveFromISR(int_wifly_queue, &send_buffer, &higher_priority_task_woken)) {
+            cycle.sending = true;
+            cycle.item = send_buffer.buff[0];
+            send_buffer_pos = 0;
+            portEND_SWITCHING_ISR(higher_priority_task_woken);
+        // We didn't receive a buffer.
+        } else {
+            cycle.sending = false;
+        }
+    // We are still processing something.
+    } else {
+        cycle.sending = true;
+        cycle.item = send_buffer.buff[send_buffer_pos];
+    }
+    return cycle;
+}
+
+void wifly_int_confirm_sent() {
+    send_buffer_pos++;
+    if (send_buffer_pos == send_buffer.length) {
+        BaseType_t higher_priority_task_woken = pdFALSE;
+        // Attempt to receive a new buffer to send.
+        if (xQueueReceiveFromISR(int_wifly_queue, &send_buffer, &higher_priority_task_woken)) {
+            send_buffer_pos = 0;
+            portEND_SWITCHING_ISR(higher_priority_task_woken);
+        // We didn't receive a buffer.
+        } else {
+            send_buffer.buff = 0;
+            SYS_INT_SourceDisable(INT_SOURCE_USART_1_TRANSMIT);
+        }
+    }
 }
 
 void wifly_int_recv_byte(uint8_t byte) {

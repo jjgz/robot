@@ -2,7 +2,7 @@
 #include "network_send.h"
 #include "debug.h"
 
-#define NUM_SAMPLES_BEFORE_SEND 50
+#define NUM_SAMPLES_BEFORE_SEND 500
 
 unsigned samples_collected;
 unsigned sample_accumulator;

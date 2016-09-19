@@ -38,7 +38,6 @@ void processing_add_recvmsg(NRMessage *message) {
 
 void PROCESSING_Initialize() {
     queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
-    wifly_int_init();
 }
 
 void PROCESSING_Tasks() {
@@ -54,10 +53,11 @@ void PROCESSING_Tasks() {
     netstats->numJSONResponsesRecved = 0;
     netstats->numJSONRequestsSent = 0;
     netstats->numJSONResponsesSent = 0;
+    
+    
+    network_send_add_message(&netstats_message);
 
     while (1) {
-        network_send_add_message(&netstats_message);
-
         // We responded to a request, so we increase the responses sent.
         xQueueReceive(queue, &message, portMAX_DELAY);
         switch (message.type) {

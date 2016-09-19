@@ -89,13 +89,23 @@ void IntHandlerDrvAdc(void)
 
  void IntHandlerDrvUsartInstance0(void)
 {
-    if (!DRV_USART0_ReceiverBufferIsEmpty()) {
+    if (SYS_INT_SourceStatusGet(INT_SOURCE_USART_1_RECEIVE)) {
         wifly_int_recv_byte(DRV_USART0_ReadByte());
+        SYS_INT_SourceStatusClear(INT_SOURCE_USART_1_RECEIVE);
     }
     
-    DRV_USART_TasksTransmit(sysObj.drvUsart0);
-    DRV_USART_TasksReceive(sysObj.drvUsart0);
-    DRV_USART_TasksError(sysObj.drvUsart0);
+    if (SYS_INT_SourceStatusGet(INT_SOURCE_USART_1_TRANSMIT)) {
+        while (!DRV_USART0_TransmitBufferIsFull()) {
+            WiflyIntCycle cycle = wifly_int_cycle();
+            if (cycle.sending) {
+                DRV_USART0_WriteByte(cycle.item);
+                wifly_int_confirm_sent();
+            } else {
+                break;
+            }
+        }
+        SYS_INT_SourceStatusClear(INT_SOURCE_USART_1_TRANSMIT);
+    }
 }
   
 /*******************************************************************************
