@@ -37,14 +37,12 @@ bool network_recv_add_buffer_from_isr(CharBuffer *buffer) {
     if (xQueueSendToBackFromISR(network_recv_queue, buffer, &higher_priority_task_woken)) {
         // If a higher priority task was waiting for something on the queue, switch to it.
         portEND_SWITCHING_ISR(higher_priority_task_woken);
-        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 0);
         return true;
     // We didn't receive a buffer.
     } else {
         // Indicate on LD4 that we lost a packet.
         // NOTE: LD4 conflicts with SDA2 (I2C).
         SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
         return false;
     }
     return false;
@@ -62,9 +60,8 @@ void NETWORK_RECV_Tasks() {
         // Parse the JSON into objects.
         // TODO: Parse from JSON.
         // Assume the object is a stat query.
-        /*message.type = NR_QUERY_STATS;
+        message.type = NR_QUERY_STATS;
         message.data.query_stats.dummy = 'd';
-        processing_add_recvmsg(&message);*/
-        SYS_PORTS_PinToggle(0, PORT_CHANNEL_C, PORTS_BIT_POS_1);
+        processing_add_recvmsg(&message);
     }
 }

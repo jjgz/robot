@@ -27,14 +27,16 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "int_wifly.h"
 #include "debug.h"
 #include "cJSON/cJSON.h"
+#include <stdio.h>
 
 #define NETWORK_SEND_QUEUE_LEN 2
+#define MESSAGE_BUF_SIZE 512
 
 QueueHandle_t network_send_queue;
 
-char alpha;
-
 const char *netmsg = "{\"Netstats\":{\"myName\":\"Sensor\",\"numGoodMessagesRecved\":0,\"numCommErrors\":0,\"numJSONRequestsRecved\":0,\"numJSONResponsesRecved\":0,\"numJSONRequestsSent\":0,\"numJSONResponsesSent\":0}}";
+
+char messagebuff[MESSAGE_BUF_SIZE];
 
 void network_send_add_message(NSMessage *message) {
     xQueueSendToBack(network_send_queue, message, portMAX_DELAY);
@@ -42,7 +44,6 @@ void network_send_add_message(NSMessage *message) {
 
 void NETWORK_SEND_Initialize() {
     network_send_queue = xQueueCreate(NETWORK_SEND_QUEUE_LEN, sizeof(NSMessage));
-    alpha = 'a';
 }
 
 void NETWORK_SEND_Tasks() {
@@ -52,7 +53,7 @@ void NETWORK_SEND_Tasks() {
         switch (message.type) {
             case NS_NETSTATS: {
                 MSGNetstats *netstats = &message.data.netstats;
-                cJSON *root, *netstats_json;
+                /*cJSON *root, *netstats_json;
                 root = cJSON_CreateObject();
                 cJSON_AddItemToObject(root, "Netstats", netstats_json = cJSON_CreateObject());
                 cJSON_AddStringToObject(netstats_json, "myName", "Sensor");
@@ -63,23 +64,35 @@ void NETWORK_SEND_Tasks() {
                 cJSON_AddNumberToObject(netstats_json, "numJSONRequestsSent", netstats->numJSONRequestsSent);
                 cJSON_AddNumberToObject(netstats_json, "numJSONResponsesSent", netstats->numJSONResponsesSent);
                 char *cst = cJSON_PrintUnformatted(root);
-                cJSON_Delete(root);
+                cJSON_Delete(root);*/
                 
                 CharBuffer buffer;
-                buffer.buff = (char*)netmsg;
-                buffer.length = strlen(netmsg);
                 
-                int i;
-                for (i = 0; i < buffer.length; i++) {
-                    while (1) {
-                        if (!DRV_USART0_TransmitBufferIsFull()) {
-                            DRV_USART0_WriteByte(buffer.buff[i]);
-                            break;
+                buffer.length = sprintf(messagebuff, "{\"Netstats\":{\"myName\":\"Sensor\",\"numGoodMessagesRecved\":%d,\"numCommErrors\":%d,\"numJSONRequestsRecved\":%d,\"numJSONResponsesRecved\":%d,\"numJSONRequestsSent\":%d,\"numJSONResponsesSent\":%d}}",
+                        netstats->numGoodMessagesRecved,
+                        netstats->numCommErrors,
+                        netstats->numJSONRequestsRecved,
+                        netstats->numJSONResponsesRecved,
+                        netstats->numJSONRequestsSent,
+                        netstats->numJSONResponsesSent);
+                
+                if (buffer.length > 0) {
+                    buffer.buff = messagebuff;
+
+                    int i;
+                    for (i = 0; i < buffer.length; i++) {
+                        while (1) {
+                            if (!DRV_USART0_TransmitBufferIsFull()) {
+                                DRV_USART0_WriteByte(buffer.buff[i]);
+                                break;
+                            }
                         }
                     }
+                } else {
+                    SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
                 }
                 
-                free(cst);
+                //free(cst);
             } break;
         }
     }

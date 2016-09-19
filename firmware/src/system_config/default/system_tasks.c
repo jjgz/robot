@@ -97,17 +97,17 @@ void SYS_Tasks ( void )
     /* Create OS Thread for NETWORK_SEND Tasks. */
     xTaskCreate((TaskFunction_t) _NETWORK_SEND_Tasks,
                 "NETWORK_SEND Tasks",
-                512, NULL, 3, NULL);
+                1024, NULL, 3, NULL);
 
     /* Create OS Thread for NETWORK_RECV Tasks. */
     xTaskCreate((TaskFunction_t) _NETWORK_RECV_Tasks,
                 "NETWORK_RECV Tasks",
-                512, NULL, 2, NULL);
+                1024, NULL, 2, NULL);
 
     /* Create OS Thread for PROCESSING Tasks. */
     xTaskCreate((TaskFunction_t) _PROCESSING_Tasks,
                 "PROCESSING Tasks",
-                512, NULL, 1, NULL);
+                1024, NULL, 1, NULL);
 
     /**************
      * Start RTOS * 
