@@ -24,45 +24,12 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // DOM-IGNORE-END
 
 #include "network_recv.h"
-#include "processing.h"
-#include "debug.h"
-
-#define NETWORK_RECV_QUEUE_LEN 14
-
-QueueHandle_t network_recv_queue;
-
-bool network_recv_add_buffer_from_isr(CharBuffer *buffer) {
-    BaseType_t higher_priority_task_woken = pdFALSE;
-    // Attempt add the buffer from the isr to the queue.
-    if (xQueueSendToBackFromISR(network_recv_queue, buffer, &higher_priority_task_woken)) {
-        // If a higher priority task was waiting for something on the queue, switch to it.
-        portEND_SWITCHING_ISR(higher_priority_task_woken);
-        return true;
-    // We didn't receive a buffer.
-    } else {
-        // Indicate on LD4 that we lost a packet.
-        // NOTE: LD4 conflicts with SDA2 (I2C).
-        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-        return false;
-    }
-    return false;
-}
+#include "network/recv.h"
 
 void NETWORK_RECV_Initialize() {
-    network_recv_queue = xQueueCreate(NETWORK_RECV_QUEUE_LEN, sizeof(CharBuffer));
-    wifly_int_init();
+    network_recv_init();
 }
 
 void NETWORK_RECV_Tasks() {
-    CharBuffer buffer;
-    NRMessage message;
-    while (1) {
-        xQueueReceive(network_recv_queue, &buffer, portMAX_DELAY);
-        // Parse the JSON into objects.
-        // TODO: Parse from JSON.
-        // Assume the object is a stat query.
-        message.type = NR_QUERY_STATS;
-        message.data.query_stats.dummy = 'd';
-        processing_add_recvmsg(&message);
-    }
+    network_recv_task();
 }

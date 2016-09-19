@@ -38,8 +38,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include <stdlib.h>
 #include "system_config.h"
 #include "system_definitions.h"
-#include "buffer.h"
-#include "network_common.h"
 
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
@@ -49,27 +47,8 @@ extern "C" {
 #endif
 // DOM-IGNORE-END
 
-typedef enum {
-    NS_NETSTATS,
-    NS_ADC_READING,
-} NSType;
-
-typedef union {
-    MSGNetstats netstats;
-    MSGAdcReading adc_reading;
-} NSUnion;
-
-typedef struct {
-    NSType type;
-    NSUnion data;
-} NSMessage;
-
-void network_send_add_message(NSMessage *message);
-void network_send_add_message_isr(NSMessage *message);
-
 void NETWORK_SEND_Initialize();
 void NETWORK_SEND_Tasks();
-
 
 #endif /* _NETWORK_SEND_H */
 

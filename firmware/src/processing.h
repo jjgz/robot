@@ -39,7 +39,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system_config.h"
 #include "system_definitions.h"
 
-#include "network_recv.h"
+#include "network/recv.h"
 
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility

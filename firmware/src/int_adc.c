@@ -1,5 +1,5 @@
 #include "int_adc.h"
-#include "network_send.h"
+#include "network/send.h"
 #include "debug.h"
 
 #define NUM_SAMPLES_BEFORE_SEND 500

@@ -61,13 +61,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include <xc.h>
 #include <sys/attribs.h>
-#include "network_send.h"
-#include "network_recv.h"
-#include "processing.h"
-#include "int_wifly.h"
+#include "network/int_wifly.h"
 #include "int_adc.h"
 #include "system_definitions.h"
-#include "debug.h"
 #include "framework/driver/adc/drv_adc_static.h"
 
 // *****************************************************************************
