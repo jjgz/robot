@@ -50,11 +50,13 @@ extern "C" {
 // DOM-IGNORE-END
 
 typedef enum {
-    NS_NETSTATS
+    NS_NETSTATS,
+    NS_ADC_READING,
 } NSType;
 
 typedef union {
     MSGNetstats netstats;
+    MSGAdcReading adc_reading;
 } NSUnion;
 
 typedef struct {

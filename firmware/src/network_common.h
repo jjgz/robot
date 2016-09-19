@@ -11,6 +11,10 @@ typedef struct {
 } MSGNetstats;
 
 typedef struct {
+    unsigned reading;
+} MSGAdcReading;
+
+typedef struct {
     char dummy;
 } MSGQueryStats;
 

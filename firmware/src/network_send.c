@@ -29,7 +29,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "cJSON/cJSON.h"
 #include <stdio.h>
 
-#define NETWORK_SEND_QUEUE_LEN 2
+#define NETWORK_SEND_QUEUE_LEN 16
 #define MESSAGE_BUF_SIZE 512
 
 QueueHandle_t network_send_queue;
@@ -53,21 +53,7 @@ void NETWORK_SEND_Tasks() {
         switch (message.type) {
             case NS_NETSTATS: {
                 MSGNetstats *netstats = &message.data.netstats;
-                /*cJSON *root, *netstats_json;
-                root = cJSON_CreateObject();
-                cJSON_AddItemToObject(root, "Netstats", netstats_json = cJSON_CreateObject());
-                cJSON_AddStringToObject(netstats_json, "myName", "Sensor");
-                cJSON_AddNumberToObject(netstats_json, "numGoodMessagesRecved", netstats->numGoodMessagesRecved);
-                cJSON_AddNumberToObject(netstats_json, "numCommErrors", netstats->numCommErrors);
-                cJSON_AddNumberToObject(netstats_json, "numJSONRequestsRecved", netstats->numJSONRequestsRecved);
-                cJSON_AddNumberToObject(netstats_json, "numJSONResponsesRecved", netstats->numJSONResponsesRecved);
-                cJSON_AddNumberToObject(netstats_json, "numJSONRequestsSent", netstats->numJSONRequestsSent);
-                cJSON_AddNumberToObject(netstats_json, "numJSONResponsesSent", netstats->numJSONResponsesSent);
-                char *cst = cJSON_PrintUnformatted(root);
-                cJSON_Delete(root);*/
-                
                 CharBuffer buffer;
-                
                 buffer.length = sprintf(messagebuff, "{\"Netstats\":{\"myName\":\"Sensor\",\"numGoodMessagesRecved\":%d,\"numCommErrors\":%d,\"numJSONRequestsRecved\":%d,\"numJSONResponsesRecved\":%d,\"numJSONRequestsSent\":%d,\"numJSONResponsesSent\":%d}}",
                         netstats->numGoodMessagesRecved,
                         netstats->numCommErrors,
@@ -93,6 +79,27 @@ void NETWORK_SEND_Tasks() {
                 }
                 
                 //free(cst);
+            } break;
+            case NS_ADC_READING: {
+                MSGAdcReading *adc_reading = &message.data.adc_reading;
+                CharBuffer buffer;
+                buffer.length = sprintf(messagebuff, "{\"AdcReading\":{\"reading\":%d}}", adc_reading->reading);
+                
+                if (buffer.length > 0) {
+                    buffer.buff = messagebuff;
+
+                    int i;
+                    for (i = 0; i < buffer.length; i++) {
+                        while (1) {
+                            if (!DRV_USART0_TransmitBufferIsFull()) {
+                                DRV_USART0_WriteByte(buffer.buff[i]);
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+                }
             } break;
         }
     }
