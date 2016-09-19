@@ -65,21 +65,31 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "network_recv.h"
 #include "processing.h"
 #include "int_wifly.h"
+#include "int_adc.h"
 #include "system_definitions.h"
 #include "debug.h"
+#include "framework/driver/adc/drv_adc_static.h"
 
 // *****************************************************************************
 // *****************************************************************************
 // Section: System Interrupt Vector Functions
 // *****************************************************************************
 // *****************************************************************************
-
-bool sending = 0;
-char sendthing;
+void IntHandlerDrvAdc(void)
+{
+    //debug_loc(DEBUG_INTADC_ENTER);
+    if (DRV_ADC_SamplesAvailable()) {
+        int_adc_sample(PLIB_ADC_ResultGetByIndex(DRV_ADC_ID_1, 0));
+    }
+    PLIB_ADC_SampleAutoStartEnable(DRV_ADC_ID_1);
+    /* Clear ADC Interrupt Flag */
+    PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_ADC_1);
+    //debug_loc(DEBUG_INTADC_LEAVE);
+}
 
  void IntHandlerDrvUsartInstance0(void)
 {
-    if (!DRV_USART0_ReceiverBufferIsEmpty()){
+    if (!DRV_USART0_ReceiverBufferIsEmpty()) {
         wifly_int_recv_byte(DRV_USART0_ReadByte());
     }
     

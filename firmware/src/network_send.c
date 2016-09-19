@@ -25,6 +25,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "network_send.h"
 #include "int_wifly.h"
+#include "int_adc.h"
 #include "debug.h"
 #include "cJSON/cJSON.h"
 #include <stdio.h>
@@ -42,8 +43,24 @@ void network_send_add_message(NSMessage *message) {
     xQueueSendToBack(network_send_queue, message, portMAX_DELAY);
 }
 
+void network_send_add_message_isr(NSMessage *message) {
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    // Attempt add the buffer from the isr to the queue.
+    if (xQueueSendToBackFromISR(network_send_queue, message, &higher_priority_task_woken)) {
+        // If a higher priority task was waiting for something on the queue, switch to it.
+        portEND_SWITCHING_ISR(higher_priority_task_woken);
+    // We didn't receive a buffer.
+    } else {
+        // Indicate on LD4 that we lost a packet.
+        // NOTE: LD4 conflicts with SDA2 (I2C).
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+    }
+}
+
 void NETWORK_SEND_Initialize() {
     network_send_queue = xQueueCreate(NETWORK_SEND_QUEUE_LEN, sizeof(NSMessage));
+    int_adc_init();
+    DRV_ADC_Open();
 }
 
 void NETWORK_SEND_Tasks() {
@@ -83,6 +100,7 @@ void NETWORK_SEND_Tasks() {
             case NS_ADC_READING: {
                 MSGAdcReading *adc_reading = &message.data.adc_reading;
                 CharBuffer buffer;
+                    //debug_loc(DEBUG_NETSEND_BEFORE_PARSE);
                 buffer.length = sprintf(messagebuff, "{\"AdcReading\":{\"reading\":%d}}", adc_reading->reading);
                 
                 if (buffer.length > 0) {

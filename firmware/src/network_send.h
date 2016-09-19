@@ -65,6 +65,7 @@ typedef struct {
 } NSMessage;
 
 void network_send_add_message(NSMessage *message);
+void network_send_add_message_isr(NSMessage *message);
 
 void NETWORK_SEND_Initialize();
 void NETWORK_SEND_Tasks();

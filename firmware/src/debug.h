@@ -78,6 +78,13 @@ typedef enum {
     DEBUG_NETSEND_AFTER_STRING,
     // 1F
     DEBUG_NETSEND_AFTER_STRLEN,
+            
+    // 20
+    DEBUG_INTADC_ENTER,
+    // 21
+    DEBUG_INTADC_LEAVE,
+    // 22
+    DEBUG_INTADC_BEFORE_SEND,
 } DebugLocation;
 
 void debug_val(unsigned char val);
