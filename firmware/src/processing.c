@@ -67,6 +67,10 @@ void PROCESSING_Tasks() {
                 // We responded to a request, so we increase the responses sent.
                 netstats->numJSONResponsesSent++;
             } break;
+            case NR_INVALID_ERROR:
+            {
+                netstats->numCommErrors++;
+            } break;
             default:
                 break;
         }
