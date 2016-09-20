@@ -40,7 +40,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system_definitions.h"
 
 #include "network/recv.h"
-#define MY_NAME "Geordon Worley"
+#define MY_NAME "Zach Taylor"
 #define PROCESSING_QUEUE_LEN 5
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
