@@ -85,6 +85,15 @@ typedef enum {
     DEBUG_INTADC_LEAVE,
     // 22
     DEBUG_INTADC_BEFORE_SEND,
+            
+    //23
+    DEBUG_RECV_HEARTBEAT,
+    //24
+    DEBUG_RECV_NETSTAT,
+    //25
+    DEBUG_RECV_GRABBING,
+    //26
+    DEBUG_RECV_LIFTING,
 } DebugLocation;
 
 void debug_val(unsigned char val);

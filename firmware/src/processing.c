@@ -27,16 +27,14 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "network/send.h"
 #include "debug.h"
 
-#define PROCESSING_QUEUE_LEN 1
-
-QueueHandle_t queue;
+QueueHandle_t processing_queue;
 
 void processing_add_recvmsg(NRMessage *message) {
-    xQueueSendToBack(queue, message, portMAX_DELAY);
+    xQueueSendToBack(processing_queue, message, portMAX_DELAY);
 }
 
 void PROCESSING_Initialize() {
-    queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
+    processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
 }
 
 void PROCESSING_Tasks() {
@@ -58,7 +56,7 @@ void PROCESSING_Tasks() {
 
     while (1) {
         // We responded to a request, so we increase the responses sent.
-        xQueueReceive(queue, &message, portMAX_DELAY);
+        xQueueReceive(processing_queue, &message, portMAX_DELAY);
         switch (message.type) {
             case NR_QUERY_STATS: {
                 MSGQueryStats *stats = &message.data.query_stats;
@@ -69,6 +67,8 @@ void PROCESSING_Tasks() {
                 // We responded to a request, so we increase the responses sent.
                 netstats->numJSONResponsesSent++;
             } break;
+            default:
+                break;
         }
     }
 }

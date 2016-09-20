@@ -6,4 +6,13 @@ typedef struct {
     unsigned length;
 } CharBuffer;
 
+typedef struct {
+  float x,y;  
+}Point;
+
+typedef struct{
+    Point *buff;
+    unsigned length;
+}PointBuffer;
+
 #endif
