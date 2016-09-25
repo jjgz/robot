@@ -40,7 +40,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system_definitions.h"
 
 #include "network/recv.h"
-#define MY_NAME "Geordon Worley"
+#define MY_NAME "Joshua Chung"
 #define PROCESSING_QUEUE_LEN 5
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
@@ -49,7 +49,20 @@ extern "C" {
 
 #endif
 // DOM-IGNORE-END
+typedef enum {
+    PR_ADC,
+    PR_NR,
+} PRType;
 
+typedef union {
+    NRMessage nr_message;
+    unsigned adc_sample;
+} PRUnion;
+
+typedef struct {
+    PRType type;
+    PRUnion data;
+} PRMessage;
 void processing_add_recvmsg(NRMessage *message);
 
 void PROCESSING_Initialize();

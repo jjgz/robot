@@ -18,11 +18,11 @@ void int_adc_sample(unsigned sample) {
     if (samples_collected == NUM_SAMPLES_BEFORE_SEND) {
         samples_collected = 0;
         //debug_loc(sample_accumulator / NUM_SAMPLES_BEFORE_SEND);
-        NSMessage message;
-        message.type = NS_ADC_READING;
-        message.data.adc_reading.reading = PLIB_ADC_ResultGetByIndex(DRV_ADC_ID_1, 0);
+        //NSMessage message;
+        //message.type = NS_ADC_READING;
+        //message.data.adc_reading.reading = PLIB_ADC_ResultGetByIndex(DRV_ADC_ID_1, 0);
         //debug_loc(message.data.adc_reading.reading / NUM_SAMPLES_BEFORE_SEND);
-        network_send_add_message_isr(&message);
+        processing_add_adc_reading(sample_accumulator / NUM_SAMPLES_BEFORE_SEND);
         sample_accumulator = 0;
     }
 }
