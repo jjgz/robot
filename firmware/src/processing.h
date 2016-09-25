@@ -49,7 +49,20 @@ extern "C" {
 
 #endif
 // DOM-IGNORE-END
+typedef enum {
+    PR_ADC,
+    PR_NR,
+} PRType;
 
+typedef union {
+    NRMessage nr_message;
+    unsigned adc_sample;
+} PRUnion;
+
+typedef struct {
+    PRType type;
+    PRUnion data;
+} PRMessage;
 void processing_add_recvmsg(NRMessage *message);
 
 void PROCESSING_Initialize();
