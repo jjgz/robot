@@ -30,7 +30,28 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 QueueHandle_t processing_queue;
 
 void processing_add_recvmsg(NRMessage *message) {
-    xQueueSendToBack(processing_queue, message, portMAX_DELAY);
+    PRMessage pr_message;
+    pr_message.type = PR_NR;
+    pr_message.data.nr_message = *message;
+    xQueueSendToBack(processing_queue, &pr_message, portMAX_DELAY);
+}
+
+void processing_add_adc_reading(unsigned adc_sample){
+    PRMessage pr_adc_message;
+    pr_adc_message.type = PR_ADC;
+    pr_adc_message.data.adc_sample = adc_sample;
+    
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    // Attempt add the buffer from the isr to the queue.
+    if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
+        // If a higher priority task was waiting for something on the queue, switch to it.
+        portEND_SWITCHING_ISR(higher_priority_task_woken);
+    // We didn't receive a buffer.
+    } else {
+        // Indicate on LD4 that we lost a packet.
+        // NOTE: LD4 conflicts with SDA2 (I2C).
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+    }
 }
 
 void PROCESSING_Initialize() {
@@ -38,8 +59,8 @@ void PROCESSING_Initialize() {
 }
 
 void PROCESSING_Tasks() {
-    NRMessage message;
-
+    PRMessage recv_message;
+    NSMessage send_message;
     // Create netstats message.
     NSMessage netstats_message;
     netstats_message.type = NS_NETSTATS;
@@ -56,27 +77,61 @@ void PROCESSING_Tasks() {
 
     while (1) {
         // We responded to a request, so we increase the responses sent.
-        xQueueReceive(processing_queue, &message, portMAX_DELAY);
-        switch (message.type) {
-            case NR_QUERY_STATS: {
-                MSGQueryStats *stats = &message.data.query_stats;
-                netstats->numGoodMessagesRecved++;
-                netstats->numJSONRequestsRecved++;
-                network_send_add_message(&netstats_message);
+        xQueueReceive(processing_queue, &recv_message, portMAX_DELAY);
+        
+        switch (recv_message.type) {
+            case PR_NR:{
+                NRMessage *nr_message = &recv_message.data.nr_message;
+                 switch (nr_message->type) {
+                    case NR_QUERY_STATS: {
+                        MSGQueryStats *stats = &nr_message->data.query_stats;
+                        netstats->numGoodMessagesRecved++;
+                        netstats->numJSONRequestsRecved++;
+                        network_send_add_message(&netstats_message);
 
-                // We responded to a request, so we increase the responses sent.
-                netstats->numJSONResponsesSent++;
+                        // We responded to a request, so we increase the responses sent.
+                        netstats->numJSONResponsesSent++;
+                    } break;
+                    case NR_INVALID_ERROR:
+                    {
+                        netstats->numCommErrors++;
+                    } break;
+                    case NR_REQ_NAME:
+                    {
+                        send_message.type = NS_SEND_NAME_JOSH;
+                        network_send_add_message(&send_message);
+                    } break;
+                    default:
+                        break;
+                }       
             } break;
-            case NR_INVALID_ERROR:
+            
+            case PR_ADC:
             {
-                netstats->numCommErrors++;
+                //TODO:: ADC DATA
+                send_message.type = NS_ADC_READING;
+                send_message.data.adc_reading.reading = recv_message.data.adc_sample;
+                network_send_add_message(&send_message);
             } break;
+            
             default:
                 break;
         }
     }
 }
 
+     /*       case NS_ADC_READING: {
+                MSGAdcReading *adc_reading = &message.data.adc_reading;
+                buffer.buff = messagebuff;
+                buffer.length = sprintf(messagebuff, "{\"AdcReading\":{\"reading\":%d}}", adc_reading->reading);
+                
+                if (buffer.length > 0) {
+                    wifly_int_send_buffer(&buffer);
+                    next_messagebuff();
+                } else {
+                    SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+                }
+            } break;*/
 
 
 /*******************************************************************************
