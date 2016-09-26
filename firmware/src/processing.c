@@ -101,6 +101,11 @@ void PROCESSING_Tasks() {
                         send_message.type = NS_SEND_NAME_GEO;
                         network_send_add_message(&send_message);
                     } break;
+                    case NR_REQ_HELLO_GEORDON_JOSH:
+                    {
+                        send_message.type = NS_HELLO_JOSH;
+                        network_send_add_message(&send_message);
+                    } break;
                     default:
                         break;
                 }       
