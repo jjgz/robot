@@ -98,7 +98,7 @@ void PROCESSING_Tasks() {
                     } break;
                     case NR_REQ_NAME:
                     {
-                        send_message.type = NS_SEND_NAME_JOSH;
+                        send_message.type = NS_SEND_NAME_GEO;
                         network_send_add_message(&send_message);
                     } break;
                     default:
