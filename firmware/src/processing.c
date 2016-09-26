@@ -91,6 +91,9 @@ void PROCESSING_Tasks() {
 
                         // We responded to a request, so we increase the responses sent.
                         netstats->numJSONResponsesSent++;
+                        
+                        send_message.type = NS_REQ_HELLO_GEORDON_JOSH;
+                        network_send_add_message(&send_message);
                     } break;
                     case NR_INVALID_ERROR:
                     {
@@ -100,6 +103,10 @@ void PROCESSING_Tasks() {
                     {
                         send_message.type = NS_SEND_NAME_JOSH;
                         network_send_add_message(&send_message);
+                    } break;
+                    case NR_HELLO_JOSH:
+                    {
+                        SYS_PORTS_PinToggle(0, PORT_CHANNEL_A, PORTS_BIT_POS_3);
                     } break;
                     default:
                         break;
@@ -119,19 +126,6 @@ void PROCESSING_Tasks() {
         }
     }
 }
-
-     /*       case NS_ADC_READING: {
-                MSGAdcReading *adc_reading = &message.data.adc_reading;
-                buffer.buff = messagebuff;
-                buffer.length = sprintf(messagebuff, "{\"AdcReading\":{\"reading\":%d}}", adc_reading->reading);
-                
-                if (buffer.length > 0) {
-                    wifly_int_send_buffer(&buffer);
-                    next_messagebuff();
-                } else {
-                    SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-                }
-            } break;*/
 
 
 /*******************************************************************************
