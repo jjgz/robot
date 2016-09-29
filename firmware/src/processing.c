@@ -84,7 +84,6 @@ void PROCESSING_Tasks() {
                 NRMessage *nr_message = &recv_message.data.nr_message;
                  switch (nr_message->type) {
                     case NR_QUERY_STATS: {
-                        MSGQueryStats *stats = &nr_message->data.query_stats;
                         netstats->numGoodMessagesRecved++;
                         netstats->numJSONRequestsRecved++;
                         network_send_add_message(&netstats_message);
@@ -101,11 +100,6 @@ void PROCESSING_Tasks() {
                         send_message.type = NS_SEND_NAME_GEO;
                         network_send_add_message(&send_message);
                     } break;
-                    case NR_REQ_HELLO_GEORDON_JOSH:
-                    {
-                        send_message.type = NS_HELLO_JOSH;
-                        network_send_add_message(&send_message);
-                    } break;
                     default:
                         break;
                 }       
@@ -113,10 +107,7 @@ void PROCESSING_Tasks() {
             
             case PR_ADC:
             {
-                //TODO:: ADC DATA
-                send_message.type = NS_ADC_READING;
-                send_message.data.adc_reading.reading = recv_message.data.adc_sample;
-                network_send_add_message(&send_message);
+                // TODO: Process ADC data.
             } break;
             
             default:
@@ -124,21 +115,3 @@ void PROCESSING_Tasks() {
         }
     }
 }
-
-     /*       case NS_ADC_READING: {
-                MSGAdcReading *adc_reading = &message.data.adc_reading;
-                buffer.buff = messagebuff;
-                buffer.length = sprintf(messagebuff, "{\"AdcReading\":{\"reading\":%d}}", adc_reading->reading);
-                
-                if (buffer.length > 0) {
-                    wifly_int_send_buffer(&buffer);
-                    next_messagebuff();
-                } else {
-                    SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-                }
-            } break;*/
-
-
-/*******************************************************************************
- End of File
- */
