@@ -71,19 +71,31 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // Section: System Interrupt Vector Functions
 // *****************************************************************************
 // *****************************************************************************
-void IntHandlerDrvAdc(void)
+
+uint32_t value = 0;
+void IntHandlerDrvTmrInstance0(void)
 {
-    //debug_loc(DEBUG_INTADC_ENTER);
-    if (DRV_ADC_SamplesAvailable()) {
-        int_adc_sample(PLIB_ADC_ResultGetByIndex(DRV_ADC_ID_1, 0));
-    }
-    PLIB_ADC_SampleAutoStartEnable(DRV_ADC_ID_1);
-    /* Clear ADC Interrupt Flag */
-    PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_ADC_1);
-    //debug_loc(DEBUG_INTADC_LEAVE);
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_3);
 }
 
- void IntHandlerDrvUsartInstance0(void)
+void IntHandlerDrvTmrInstance1(void)
+{
+    
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_4);
+}
+    
+void IntHandlerDrvTmrInstance2(void)
+{
+    processing_add_tmr_reading(DRV_TMR0_CounterValueGet(),DRV_TMR1_CounterValueGet());
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_5);
+}
+    
+void IntHandlerDrvTmrInstance3(void)
+{
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
+}
+
+void IntHandlerDrvUsartInstance0(void)
 {
     if (SYS_INT_SourceStatusGet(INT_SOURCE_USART_1_RECEIVE)) {
         wifly_int_recv_byte(DRV_USART0_ReadByte());
@@ -102,6 +114,8 @@ void IntHandlerDrvAdc(void)
         }
         SYS_INT_SourceStatusClear(INT_SOURCE_USART_1_TRANSMIT);
     }
+    SYS_INT_SourceStatusClear(INT_SOURCE_USART_1_TRANSMIT);
+    
 }
   
 /*******************************************************************************

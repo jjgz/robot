@@ -28,7 +28,24 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "debug.h"
 
 QueueHandle_t processing_queue;
-
+rover my_rover;
+void enable_init()
+{
+   // PLIB_INT_SourceEnable(INT_ID_0, INT_SOURCE_TIMER_5);
+    PLIB_INT_SourceEnable(INT_ID_0, INT_SOURCE_TIMER_2);
+    DRV_TMR0_Start();
+    DRV_TMR1_Start();
+    DRV_TMR2_Start();
+    DRV_TMR3_Start();
+    DRV_OC0_Enable();
+    DRV_OC1_Enable();
+    DRV_OC0_Start();
+    DRV_OC1_Start();  
+    my_rover.prev_left = 0;
+    my_rover.prev_right = 0;
+    my_rover.tick_left = 0;
+    my_rover.tick_right = 0;
+}
 void processing_add_recvmsg(NRMessage *message) {
     PRMessage pr_message;
     pr_message.type = PR_NR;
@@ -36,10 +53,18 @@ void processing_add_recvmsg(NRMessage *message) {
     xQueueSendToBack(processing_queue, &pr_message, portMAX_DELAY);
 }
 
-void processing_add_adc_reading(unsigned adc_sample){
+void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4){
     PRMessage pr_adc_message;
-    pr_adc_message.type = PR_ADC;
-    pr_adc_message.data.adc_sample = adc_sample;
+    pr_adc_message.type = PR_TMR;
+    if(my_rover.prev_left == 0)
+        my_rover.prev_left = tmr3;
+
+    if(my_rover.prev_right == 0)
+        my_rover.prev_right = tmr4;
+    
+   
+    pr_adc_message.data.timer.tmr3 = tmr3;
+    pr_adc_message.data.timer.tmr4 = tmr4;
     
     BaseType_t higher_priority_task_woken = pdFALSE;
     // Attempt add the buffer from the isr to the queue.
@@ -55,6 +80,7 @@ void processing_add_adc_reading(unsigned adc_sample){
 }
 
 void PROCESSING_Initialize() {
+    enable_init();
     processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
 }
 
@@ -100,19 +126,36 @@ void PROCESSING_Tasks() {
                         send_message.type = NS_SEND_NAME_JOSH;
                         network_send_add_message(&send_message);
                     } break;
+                     case NR_REQ_JOSH_POINTS:
+                     {
+                         send_message.type = NS_JOSH_REQ_POINTS;
+                         send_message.data.point.x = 5;
+                         send_message.data.point.y = 6;
+                         network_send_add_message(&send_message);
+                     }break;
+                     case NR_REQ_IN_POS:
+                     {
+                         send_message.type = NS_IN_POS;
+                         send_message.data.answer = true;
+                         network_send_add_message(&send_message);
+                     }
                     default:
                         break;
                 }       
             } break;
-            
-            case PR_ADC:
+            case PR_TMR:
             {
-                // TODO: Use ADC data.
-            } break;
-            
+                send_message.type = NS_TMR;
+                send_message.data.tmr.tmr3 = recv_message.data.timer.tmr3;
+                send_message.data.tmr.tmr4 = recv_message.data.timer.tmr4;
+                network_send_add_message(&send_message);
+            }break;
             default:
                 break;
         }
+        
+        
+        
     }
 }
 
