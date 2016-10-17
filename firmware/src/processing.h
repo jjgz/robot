@@ -50,21 +50,28 @@ extern "C" {
 #endif
 // DOM-IGNORE-END
 typedef enum {
-    PR_ADC,
+    PR_TMR,
     PR_NR,
 } PRType;
 
 typedef union {
     NRMessage nr_message;
-    unsigned adc_sample;
+    TimerDebug timer;
 } PRUnion;
+
+typedef struct{
+    uint32_t prev_left;
+    uint32_t prev_right;
+    uint32_t tick_left;
+    uint32_t tick_right;
+}rover;
 
 typedef struct {
     PRType type;
     PRUnion data;
 } PRMessage;
 void processing_add_recvmsg(NRMessage *message);
-
+void enable_init();
 void PROCESSING_Initialize();
 void PROCESSING_Tasks();
 
