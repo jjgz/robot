@@ -98,7 +98,7 @@ extern "C" {
 #define SYS_PORT_A_LAT          0x0
 #define SYS_PORT_A_ODC          0x0
 
-#define SYS_PORT_C_TRIS         0xf01c
+#define SYS_PORT_C_TRIS         0xb01c
 #define SYS_PORT_C_LAT          0x0
 #define SYS_PORT_C_ODC          0x0
 
@@ -114,7 +114,7 @@ extern "C" {
 #define SYS_PORT_F_LAT          0x0
 #define SYS_PORT_F_ODC          0x0
 
-#define SYS_PORT_G_TRIS         0x83cf
+#define SYS_PORT_G_TRIS         0x83cd
 #define SYS_PORT_G_LAT          0x0
 #define SYS_PORT_G_ODC          0x0
 

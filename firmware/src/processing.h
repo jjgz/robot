@@ -52,6 +52,7 @@ extern "C" {
 typedef enum {
     PR_TMR,
     PR_NR,
+            PR_PWM,
 } PRType;
 
 typedef union {
@@ -70,7 +71,15 @@ typedef struct {
     PRType type;
     PRUnion data;
 } PRMessage;
-void processing_add_recvmsg(NRMessage *message);
+
+typedef struct{
+    float wanted_speed;
+}pwm_to_isr;
+
+void processing_add_recvmsg(NRMessage *message); 
+void interrupt_add_pwm(pwm_to_isr *pwm);
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm);
+void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4);
 void enable_init();
 void PROCESSING_Initialize();
 void PROCESSING_Tasks();
