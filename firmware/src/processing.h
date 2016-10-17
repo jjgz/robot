@@ -73,12 +73,13 @@ typedef struct {
 } PRMessage;
 
 typedef struct{
-    float wanted_speed;
+    double wanted_speed_right;
+    double wanted_speed_left;
 }pwm_to_isr;
 
 void processing_add_recvmsg(NRMessage *message); 
 void interrupt_add_pwm(pwm_to_isr *pwm);
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm,uint32_t tmr3, uint32_t tmr4);
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
 void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4);
 void enable_init();
 void PROCESSING_Initialize();

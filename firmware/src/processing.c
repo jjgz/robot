@@ -26,17 +26,14 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "processing.h"
 #include "network/send.h"
 #include "debug.h"
-#include "peripheral/oc/plib_oc.h"
 #include "pid/pid.h"
 extern Pid controller_right;
 extern Pid controller_left;
 QueueHandle_t processing_queue;
+extern QueueHandle_t interrupt_queue;
 rover my_rover;
-
-double clamp(double val, double min, double max)
-{
-    return min(max, max(min, val));
-}
+extern double wanted_speed_left;
+extern double wanted_speed_right;
 void enable_init()
 {
     pid_start(&controller_left);
@@ -51,6 +48,8 @@ void enable_init()
     DRV_OC1_Enable();
     DRV_OC0_Start();
     DRV_OC1_Start();
+    wanted_speed_right = 2e-1;
+    wanted_speed_left = 2e-1;
     my_rover.prev_left = 0;
     my_rover.prev_right = 0;
     my_rover.tick_left = 0;
@@ -64,39 +63,15 @@ void processing_add_recvmsg(NRMessage *message) {
 }
 //tmr3 = right
 //tmr4 = left
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4){
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm,uint32_t tmr3, uint32_t tmr4){
     PRMessage pr_adc_message;
     pr_adc_message.type = PR_PWM;
     pr_adc_message.data.timer.speed_left = left_pwm;
     pr_adc_message.data.timer.speed_right = right_pwm;
-    
-    if(my_rover.prev_left == 0)
-        my_rover.prev_left = tmr4;
-
-    if(my_rover.prev_right == 0)
-        my_rover.prev_right = tmr3;
-    
-    my_rover.tick_left += my_rover.prev_left + tmr4;
-    my_rover.tick_right += my_rover.prev_right + tmr3;
-
+    my_rover.tick_left += tmr4;
+    my_rover.tick_right += tmr3;
     pr_adc_message.data.timer.tmr3 = my_rover.tick_left;
-    pr_adc_message.data.timer.tmr4 = my_rover.tick_right;
-    BaseType_t higher_priority_task_woken = pdFALSE;
-    // Attempt add the buffer from the isr to the queue.
-    if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
-        // If a higher priority task was waiting for something on the queue, switch to it.
-        portEND_SWITCHING_ISR(higher_priority_task_woken);
-    // We didn't receive a buffer.
-    } else {
-        // Indicate on LD4 that we lost a packet.
-        // NOTE: LD4 conflicts with SDA2 (I2C).
-        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-    }
-}
-void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4){
-    PRMessage pr_adc_message;
-    pr_adc_message.type = PR_TMR;
-    
+    pr_adc_message.data.timer.tmr4 =  my_rover.tick_right;
     BaseType_t higher_priority_task_woken = pdFALSE;
     // Attempt add the buffer from the isr to the queue.
     if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
@@ -110,9 +85,15 @@ void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4){
     }
 }
 
+void interrupt_add_pwm(pwm_to_isr *pwm)
+{
+    pwm_to_isr pwm_val = *pwm;
+    xQueueSendToBack(interrupt_queue, &pwm_val, portMAX_DELAY);
+}
 void PROCESSING_Initialize() {
     enable_init();
     processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
+    interrupt_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(pwm_to_isr));
 }
 
 void PROCESSING_Tasks() {
@@ -180,41 +161,44 @@ void PROCESSING_Tasks() {
             } break;
             case PR_PWM:
             {
-                const double left_scale =  1.1;
-                const double right_scale = 1.04;
-                double wanted_val_left = 2e-1;
-                double wanted_val_right = 2e-1;
-//                if(recv_message.data.timer.tmr3 > 50000)
-//                    wanted_val_right = 2e-5;
-//                else if(recv_message.data.timer.tmr3 > 40000)
-//                    wanted_val_right = 2e-3;
-//                else if(recv_message.data.timer.tmr3 > 30000)
-//                    wanted_val_right = 2e-2;
-//                
-//             
-//                if(recv_message.data.timer.tmr4 > 50000)
-//                    wanted_val_left = 2e-5;
-//                else if(recv_message.data.timer.tmr4 > 40000)
-//                    wanted_val_left = 2e-3;
-//                else if(recv_message.data.timer.tmr4 > 30000)
-//                    wanted_val_left = 2e-2;
-//                
+                if(my_rover.tick_right > 15000)
+                {
+                    my_rover.tick_right = 0;
+                    pwm.wanted_speed_right = 2e-1;
+                }
+                else if(my_rover.tick_right > 10000){
+                    pwm.wanted_speed_right = 2e-5;
+                    my_rover.tick_right++; 
+                }
+                else
+                {
+                    pwm.wanted_speed_right = 2e-1;
+                }
                 
-                //prev integral was 1e3
-                uint16_t output_right = clamp(pid_output(&controller_right, wanted_val_right - right_scale * (double)DRV_TMR0_CounterValueGet(), 1e1, 0, 0), 0, 65535);
-                uint16_t output_left = clamp(pid_output(&controller_left, wanted_val_left - left_scale * (double)DRV_TMR1_CounterValueGet(), 1e1, 0, 0), 0, 65535);
+
+                if(my_rover.tick_left > 15000){
+                    pwm.wanted_speed_left = 2e-1;
+                    
+                    my_rover.tick_left= 0;
+                }
+                else if(my_rover.tick_left > 10000)
+                {
+                    my_rover.tick_left++; 
+                    pwm.wanted_speed_left = 2e-5;
+                }
+                else
+                {
+                    pwm.wanted_speed_left = 2e-1;
+                }
                 
-                PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_right);
-                PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_left);
-                
+                interrupt_add_pwm(&pwm);
                 send_message.type = NS_PWM;
-                send_message.data.tmr.speed_left= output_left;
-                send_message.data.tmr.speed_right = output_right;
-                send_message.data.tmr.tmr3 = recv_message.data.timer.tmr3;
+                send_message.data.tmr.speed_left= recv_message.data.timer.speed_left;
+                send_message.data.tmr.speed_right = recv_message.data.timer.speed_right;
+                send_message.data.tmr.tmr3= recv_message.data.timer.tmr3;
                 send_message.data.tmr.tmr4 = recv_message.data.timer.tmr4;
                 network_send_add_message(&send_message);
             }break;
-            
             default:
                 break;
         }

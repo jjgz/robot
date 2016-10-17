@@ -74,14 +74,20 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 Pid controller_left;
 Pid controller_right;
 QueueHandle_t interrupt_queue;
+double wanted_speed_left;
+double wanted_speed_right;
+const double desired_speed = 2e-1;
 #define SPEED_TICKS 1000
 // *****************************************************************************
 // *****************************************************************************
 // Section: System Interrupt Vector Functions
 // *****************************************************************************
 // *****************************************************************************
+double clamp(double val, double min, double max)
+{
+    return min(max, max(min, val));
+}
 
-uint32_t value = 0;
 void IntHandlerDrvTmrInstance0(void)
 {
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_3);
@@ -97,10 +103,23 @@ void IntHandlerDrvTmrInstance1(void)
 void IntHandlerDrvTmrInstance2(void)
 {
     pwm_to_isr recv_pwm;
+    if(!xQueueIsQueueEmptyFromISR(interrupt_queue))
+    {
+        xQueueReceiveFromISR( interrupt_queue, &recv_pwm, portMAX_DELAY);
+        wanted_speed_left = recv_pwm.wanted_speed_left;
+        wanted_speed_right = recv_pwm.wanted_speed_right;
+    }
+ 
+    const double left_scale = 1.0;
+    const double right_scale = 1.015;
+    uint16_t output_right = clamp(pid_output(&controller_right, wanted_speed_right - right_scale * (double)DRV_TMR0_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
+    uint16_t output_left = clamp(pid_output(&controller_left, wanted_speed_left - left_scale * (double)DRV_TMR1_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
     
-    processing_add_pwm_reading(0,0, DRV_TMR0_CounterValueGet(), DRV_TMR1_CounterValueGet());
+    processing_add_pwm_reading(output_left,output_right,DRV_TMR0_CounterValueGet(),DRV_TMR1_CounterValueGet());
     DRV_TMR0_CounterClear();
     DRV_TMR1_CounterClear();
+    PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_right);
+    PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_left);
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_5);
 }
     
