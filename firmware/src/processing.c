@@ -26,11 +26,17 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "processing.h"
 #include "network/send.h"
 #include "debug.h"
+#include "peripheral/oc/plib_oc.h"
 #include "pid/pid.h"
 extern Pid controller_right;
 extern Pid controller_left;
 QueueHandle_t processing_queue;
 rover my_rover;
+
+double clamp(double val, double min, double max)
+{
+    return min(max, max(min, val));
+}
 void enable_init()
 {
     pid_start(&controller_left);
@@ -58,12 +64,23 @@ void processing_add_recvmsg(NRMessage *message) {
 }
 //tmr3 = right
 //tmr4 = left
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm){
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4){
     PRMessage pr_adc_message;
     pr_adc_message.type = PR_PWM;
     pr_adc_message.data.timer.speed_left = left_pwm;
     pr_adc_message.data.timer.speed_right = right_pwm;
     
+    if(my_rover.prev_left == 0)
+        my_rover.prev_left = tmr4;
+
+    if(my_rover.prev_right == 0)
+        my_rover.prev_right = tmr3;
+    
+    my_rover.tick_left += my_rover.prev_left + tmr4;
+    my_rover.tick_right += my_rover.prev_right + tmr3;
+
+    pr_adc_message.data.timer.tmr3 = my_rover.tick_left;
+    pr_adc_message.data.timer.tmr4 = my_rover.tick_right;
     BaseType_t higher_priority_task_woken = pdFALSE;
     // Attempt add the buffer from the isr to the queue.
     if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
@@ -79,18 +96,6 @@ void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm){
 void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4){
     PRMessage pr_adc_message;
     pr_adc_message.type = PR_TMR;
-    if(my_rover.prev_left == 0)
-        my_rover.prev_left = tmr4;
-
-    if(my_rover.prev_right == 0)
-        my_rover.prev_right = tmr3;
-    
-    my_rover.tick_left += my_rover.prev_left + tmr4;
-    my_rover.tick_right += my_rover.prev_right + tmr3;
-    if(my_rover.tick_right > 10000)
-        my_rover.tick_right = 10001;
-    pr_adc_message.data.timer.tmr3 = my_rover.tick_left;
-    pr_adc_message.data.timer.tmr4 = my_rover.tick_right;
     
     BaseType_t higher_priority_task_woken = pdFALSE;
     // Attempt add the buffer from the isr to the queue.
@@ -175,22 +180,37 @@ void PROCESSING_Tasks() {
             } break;
             case PR_PWM:
             {
+                const double left_scale =  1.1;
+                const double right_scale = 1.04;
+                double wanted_val_left = 2e-1;
+                double wanted_val_right = 2e-1;
+//                if(recv_message.data.timer.tmr3 > 50000)
+//                    wanted_val_right = 2e-5;
+//                else if(recv_message.data.timer.tmr3 > 40000)
+//                    wanted_val_right = 2e-3;
+//                else if(recv_message.data.timer.tmr3 > 30000)
+//                    wanted_val_right = 2e-2;
+//                
+//             
+//                if(recv_message.data.timer.tmr4 > 50000)
+//                    wanted_val_left = 2e-5;
+//                else if(recv_message.data.timer.tmr4 > 40000)
+//                    wanted_val_left = 2e-3;
+//                else if(recv_message.data.timer.tmr4 > 30000)
+//                    wanted_val_left = 2e-2;
+//                
                 
-                PLIB_OC_PulseWidth16BitSet(OC_ID_1, recv_message.data.timer.speed_right);
-                PLIB_OC_PulseWidth16BitSet(OC_ID_2, recv_message.data.timer.speed_left);
+                //prev integral was 1e3
+                uint16_t output_right = clamp(pid_output(&controller_right, wanted_val_right - right_scale * (double)DRV_TMR0_CounterValueGet(), 1e1, 0, 0), 0, 65535);
+                uint16_t output_left = clamp(pid_output(&controller_left, wanted_val_left - left_scale * (double)DRV_TMR1_CounterValueGet(), 1e1, 0, 0), 0, 65535);
+                
+                PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_right);
+                PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_left);
+                
                 send_message.type = NS_PWM;
-                send_message.data.tmr.speed_left= recv_message.data.timer.speed_left;
-                send_message.data.tmr.speed_right = recv_message.data.timer.speed_right;
-                network_send_add_message(&send_message);
-            }break;
-            case PR_TMR:
-            {
-                send_message.type = NS_TMR;
-                if(recv_message.data.timer.tmr4 > 100000){
-                    pwm.wanted_speed = 2e-5;
-                    interrupt_add_pwm(&pwm);
-                }
-                send_message.data.tmr.tmr3= recv_message.data.timer.tmr3;
+                send_message.data.tmr.speed_left= output_left;
+                send_message.data.tmr.speed_right = output_right;
+                send_message.data.tmr.tmr3 = recv_message.data.timer.tmr3;
                 send_message.data.tmr.tmr4 = recv_message.data.timer.tmr4;
                 network_send_add_message(&send_message);
             }break;

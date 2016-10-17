@@ -80,10 +80,7 @@ QueueHandle_t interrupt_queue;
 // Section: System Interrupt Vector Functions
 // *****************************************************************************
 // *****************************************************************************
-double clamp(double val, double min, double max)
-{
-    return min(max, max(min, val));
-}
+
 uint32_t value = 0;
 void IntHandlerDrvTmrInstance0(void)
 {
@@ -100,25 +97,10 @@ void IntHandlerDrvTmrInstance1(void)
 void IntHandlerDrvTmrInstance2(void)
 {
     pwm_to_isr recv_pwm;
-    float wanted_speed = 2e-1;
-    if(!xQueueIsQueueEmptyFromISR(interrupt_queue))
-    {
-        
-    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
-        xQueueReceiveFromISR( interrupt_queue, &recv_pwm, portMAX_DELAY);
-        wanted_speed = recv_pwm.wanted_speed;
-    }
-    const double left_scale = 1.015;
-    const double right_scale = 1.0;
-    uint16_t output_right = clamp(pid_output(&controller_left, wanted_speed - left_scale * (double)DRV_TMR0_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
-    uint16_t output_left = clamp(pid_output(&controller_right, 2e-1 - right_scale * (double)DRV_TMR1_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
     
-    //processing_add_tmr_reading(DRV_TMR1_CounterValueGet(),DRV_TMR0_CounterValueGet());
+    processing_add_pwm_reading(0,0, DRV_TMR0_CounterValueGet(), DRV_TMR1_CounterValueGet());
     DRV_TMR0_CounterClear();
     DRV_TMR1_CounterClear();
-    processing_add_pwm_reading(output_left,output_right);
-    PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_right);
-    PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_left);
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_5);
 }
     
