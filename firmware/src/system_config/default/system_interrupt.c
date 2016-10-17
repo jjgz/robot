@@ -83,7 +83,24 @@ void IntHandlerDrvAdc(void)
     //debug_loc(DEBUG_INTADC_LEAVE);
 }
 
- void IntHandlerDrvUsartInstance0(void)
+void IntHandlerDrvTmrInstance0(void)
+{
+    
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_3);
+}
+ 
+void IntHandlerDrvTmrInstance1(void)
+{
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_4);
+}
+void IntHandlerDrvTmrInstance2(void)
+{
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_5);
+}
+
+
+
+void IntHandlerDrvUsartInstance0(void)
 {
     if (SYS_INT_SourceStatusGet(INT_SOURCE_USART_1_RECEIVE)) {
         wifly_int_recv_byte(DRV_USART0_ReadByte());
@@ -102,8 +119,7 @@ void IntHandlerDrvAdc(void)
         }
         SYS_INT_SourceStatusClear(INT_SOURCE_USART_1_TRANSMIT);
     }
-}
-  
+} 
 /*******************************************************************************
  End of File
 */

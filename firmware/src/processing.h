@@ -63,6 +63,13 @@ typedef struct {
     PRType type;
     PRUnion data;
 } PRMessage;
+
+typedef struct {
+    uint32_t time_r;
+    uint32_t time_l;
+    uint32_t last_rmotor;
+    uint32_t last_lmotor;
+}leader;
 void processing_add_recvmsg(NRMessage *message);
 
 void PROCESSING_Initialize();

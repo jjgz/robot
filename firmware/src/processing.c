@@ -71,6 +71,7 @@ void PROCESSING_Tasks() {
     netstats->numJSONResponsesRecved = 0;
     netstats->numJSONRequestsSent = 0;
     netstats->numJSONResponsesSent = 0;
+    int map[128][128];
     
     
     network_send_add_message(&netstats_message);
@@ -84,7 +85,7 @@ void PROCESSING_Tasks() {
                 NRMessage *nr_message = &recv_message.data.nr_message;
                  switch (nr_message->type) {
                     case NR_QUERY_STATS: {
-                        MSGQueryStats *stats = &nr_message->data.query_stats;
+                        //MSGQueryStats *stats = &nr_message->data.query_stats;
                         netstats->numGoodMessagesRecved++;
                         netstats->numJSONRequestsRecved++;
                         network_send_add_message(&netstats_message);
@@ -92,7 +93,7 @@ void PROCESSING_Tasks() {
                         // We responded to a request, so we increase the responses sent.
                         netstats->numJSONResponsesSent++;
                         
-                        send_message.type = NS_REQ_HELLO_GEORDON_JOSH;
+                        //send_message.type = NS_REQ_HELLO_GEORDON_JOSH;
                         network_send_add_message(&send_message);
                     } break;
                     case NR_INVALID_ERROR:
@@ -101,26 +102,56 @@ void PROCESSING_Tasks() {
                     } break;
                     case NR_REQ_NAME:
                     {
-                        send_message.type = NS_SEND_NAME_JOSH;
+                        send_message.type = NS_SEND_NAME_JOE;
                         network_send_add_message(&send_message);
                     } break;
-                    case NR_HELLO_JOSH:
+                    /*case NR_HELLO_JOSH:
                     {
                         SYS_PORTS_PinToggle(0, PORT_CHANNEL_A, PORTS_BIT_POS_3);
-                    } break;
+                    } break;*/
+                     case NR_JE:
+                     {
+                         int tmp_x = nr_message->data.point.x;
+                         int tmp_y = nr_message->data.point.y;
+                         int i;
+                         int j;
+                         for(i = 0; i <= tmp_x;i++){
+                             if(i == tmp_x){
+                                 for(j=0; j <= tmp_y;j++){
+                                     if(j == tmp_y){
+                                         map[i][j]=0;
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                     case NR_JF:
+                     {
+                         int tmp_r = nr_message->data.point.x;
+                         int tmp_c = nr_message->data.point.y;
+                         int i;
+                         int j;
+                         for(i = 0; i <= tmp_r;i++){
+                             if(i == tmp_r){
+                                 for(j=0; j <= tmp_c;j++){
+                                     if(j == tmp_c){
+                                         map[i][j]=0;
+                                     }
+                                 }
+                             }
+                         }
+                     }
                     default:
                         break;
                 }       
-            } break;
-            
+            } break;            
             case PR_ADC:
             {
                 //TODO:: ADC DATA
-                send_message.type = NS_ADC_READING;
-                send_message.data.adc_reading.reading = recv_message.data.adc_sample;
-                network_send_add_message(&send_message);
-            } break;
-            
+                //send_message.type = NS_ADC_READING;
+                //send_message.data.adc_reading.reading = recv_message.data.adc_sample;
+                //network_send_add_message(&send_message);
+            } break;            
             default:
                 break;
         }
