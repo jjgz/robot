@@ -48,12 +48,19 @@ void enable_init()
     DRV_OC1_Enable();
     DRV_OC0_Start();
     DRV_OC1_Start();
-    wanted_speed_right = 2e-1;
-    wanted_speed_left = 2e-1;
-    my_rover.prev_left = 0;
-    my_rover.prev_right = 0;
-    my_rover.tick_left = 0;
-    my_rover.tick_right = 0;
+    
+    //THIS HAS THEM STOP/////
+    wanted_speed_right = 2e-5;
+    wanted_speed_left = 2e-5;
+    //////////////////////////
+    
+    my_rover.ticks.prev_left = 0;
+    my_rover.ticks.prev_right = 0;
+    my_rover.ticks.tick_left = 0;
+    my_rover.ticks.tick_right = 0;
+    my_rover.rover_state = ROVER_INIT;
+    my_rover.stop_left = false;
+    my_rover.stop_right = false;
 }
 void processing_add_recvmsg(NRMessage *message) {
     PRMessage pr_message;
@@ -68,10 +75,8 @@ void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm,uint32_t t
     pr_adc_message.type = PR_PWM;
     pr_adc_message.data.timer.speed_left = left_pwm;
     pr_adc_message.data.timer.speed_right = right_pwm;
-    my_rover.tick_left += tmr4;
-    my_rover.tick_right += tmr3;
-    pr_adc_message.data.timer.tmr3 = my_rover.tick_left;
-    pr_adc_message.data.timer.tmr4 =  my_rover.tick_right;
+    pr_adc_message.data.timer.tmr3 = tmr3;
+    pr_adc_message.data.timer.tmr4 =  tmr4;
     BaseType_t higher_priority_task_woken = pdFALSE;
     // Attempt add the buffer from the isr to the queue.
     if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
@@ -111,8 +116,8 @@ void PROCESSING_Tasks() {
     netstats->numJSONRequestsSent = 0;
     netstats->numJSONResponsesSent = 0;
     
-    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_14, 1);
-    SYS_PORTS_PinWrite(0, PORT_CHANNEL_G, PORTS_BIT_POS_1, 1);
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_14, 0);
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_G, PORTS_BIT_POS_1, 0);
     
     
     network_send_add_message(&netstats_message);
@@ -161,49 +166,82 @@ void PROCESSING_Tasks() {
             } break;
             case PR_PWM:
             {
-                if(my_rover.tick_right > 15000)
-                {
-                    my_rover.tick_right = 0;
-                    pwm.wanted_speed_right = 2e-1;
-                }
-                else if(my_rover.tick_right > 10000){
-                    pwm.wanted_speed_right = 2e-5;
-                    my_rover.tick_right++; 
-                }
-                else
-                {
-                    pwm.wanted_speed_right = 2e-1;
-                }
-                
-
-                if(my_rover.tick_left > 15000){
-                    pwm.wanted_speed_left = 2e-1;
-                    
-                    my_rover.tick_left= 0;
-                }
-                else if(my_rover.tick_left > 10000)
-                {
-                    my_rover.tick_left++; 
-                    pwm.wanted_speed_left = 2e-5;
-                }
-                else
-                {
-                    pwm.wanted_speed_left = 2e-1;
-                }
-                
-                interrupt_add_pwm(&pwm);
                 send_message.type = NS_PWM;
+                my_rover.ticks.tick_left += recv_message.data.timer.tmr4;
+                my_rover.ticks.tick_right += recv_message.data.timer.tmr3;
+                
+                
                 send_message.data.tmr.speed_left= recv_message.data.timer.speed_left;
                 send_message.data.tmr.speed_right = recv_message.data.timer.speed_right;
-                send_message.data.tmr.tmr3= recv_message.data.timer.tmr3;
-                send_message.data.tmr.tmr4 = recv_message.data.timer.tmr4;
+                send_message.data.tmr.tmr3= my_rover.ticks.tick_right;
+                send_message.data.tmr.tmr4 = my_rover.ticks.tick_left;
                 network_send_add_message(&send_message);
             }break;
             default:
                 break;
         }
-        
-        
+        unsigned blocks = 0;
+        switch(my_rover.rover_state)
+        {
+            case ROVER_INIT:
+            {
+                blocks = 0;
+                my_rover.rover_state = ROVER_MOVE;
+            }break;
+            case ROVER_MOVE:
+            {
+                if(my_rover.stop_left && my_rover.stop_right)
+                {
+                    my_rover.stop_left = false;
+                    my_rover.stop_right = false;
+                    my_rover.ticks.tick_left = 0;
+                    my_rover.ticks.tick_right = 0;
+                }
+                pwm.wanted_speed_right = 2e-1;
+                pwm.wanted_speed_left = 2e-1;
+                interrupt_add_pwm(&pwm);
+                //my_rover.rover_state = ROVER_WAIT;
+            }break;
+            case ROVER_WAIT:
+            {
+//                pwm.wanted_speed_right = 2e-1;
+//                pwm.wanted_speed_left = 2e-1;
+                if(my_rover.ticks.tick_right >= 150)
+                {
+                    pwm.wanted_speed_right = 2e-3;
+                }
+                else if(my_rover.ticks.tick_right >= 200)
+                {
+                    my_rover.ticks.tick_right = 0;
+                    pwm.wanted_speed_right = 9e-4;
+                    my_rover.stop_right = true;
+                }
+                
+                if(my_rover.ticks.tick_left >= 150)
+                {
+                    pwm.wanted_speed_left = 2e-3;
+                }
+                else if(my_rover.ticks.tick_left >= 200){
+                    pwm.wanted_speed_left = 9e-4;            
+                    my_rover.ticks.tick_left= 0;
+                    my_rover.stop_left = true;
+                }
+                if(my_rover.stop_left && my_rover.stop_right){
+                    blocks++;
+                    my_rover.rover_state = ROVER_STOP;
+                    if(blocks < 1)
+                        my_rover.rover_state = ROVER_INIT;
+                }
+
+                interrupt_add_pwm(&pwm);
+            }break;
+            case ROVER_STOP:
+            {
+                
+            }break;
+            default:
+                break;
+        }
         
     }
 }

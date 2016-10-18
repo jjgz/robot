@@ -52,8 +52,16 @@ extern "C" {
 typedef enum {
     PR_TMR,
     PR_NR,
-            PR_PWM,
+    PR_PWM,
 } PRType;
+
+typedef enum{
+    ROVER_INIT,
+            ROVER_MOVE,
+            ROVER_WAIT,
+            ROVER_STOP,
+}RStates;
+
 
 typedef union {
     NRMessage nr_message;
@@ -65,6 +73,12 @@ typedef struct{
     uint32_t prev_right;
     uint32_t tick_left;
     uint32_t tick_right;
+}pwm_ticks;
+typedef struct{
+    pwm_ticks ticks;
+    RStates rover_state;
+    bool stop_left;
+    bool stop_right;
 }rover;
 
 typedef struct {
