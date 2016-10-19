@@ -168,7 +168,8 @@ void SYS_Initialize ( void* data )
     SYS_DEVCON_PerformanceConfig(SYS_CLK_SystemFrequencyGet());
     SYS_DEVCON_JTAGDisable();
     SYS_PORTS_Initialize();
-
+       
+    
     /* Initialize Drivers */
     /* Initialize the OC Driver */
     DRV_OC0_Initialize();

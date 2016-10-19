@@ -59,6 +59,8 @@ typedef enum{
     ROVER_INIT,
             ROVER_MOVE,
             ROVER_WAIT,
+            ROVER_ROTATE_R,
+            ROVER_ROTATE_L,
             ROVER_STOP,
 }RStates;
 
@@ -79,6 +81,9 @@ typedef struct{
     RStates rover_state;
     bool stop_left;
     bool stop_right;
+    bool slow_left;
+    bool slow_right;
+    bool got_name;
 }rover;
 
 typedef struct {
@@ -95,6 +100,7 @@ void processing_add_recvmsg(NRMessage *message);
 void interrupt_add_pwm(pwm_to_isr *pwm);
 void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
 void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4);
+void move_wheels(unsigned right, unsigned left);
 void enable_init();
 void PROCESSING_Initialize();
 void PROCESSING_Tasks();

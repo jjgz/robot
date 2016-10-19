@@ -27,11 +27,14 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "network/send.h"
 #include "debug.h"
 #include "pid/pid.h"
+
+#define TEN_CM(a) (60*a)
+#define ROTATE(a) (52*a)
 extern Pid controller_right;
 extern Pid controller_left;
 QueueHandle_t processing_queue;
 extern QueueHandle_t interrupt_queue;
-rover my_rover;
+extern rover my_rover;
 extern double wanted_speed_left;
 extern double wanted_speed_right;
 void enable_init()
@@ -61,6 +64,9 @@ void enable_init()
     my_rover.rover_state = ROVER_INIT;
     my_rover.stop_left = false;
     my_rover.stop_right = false;
+    my_rover.slow_left = false;
+    my_rover.slow_right = false;
+    my_rover.got_name = false;
 }
 void processing_add_recvmsg(NRMessage *message) {
     PRMessage pr_message;
@@ -115,10 +121,7 @@ void PROCESSING_Tasks() {
     netstats->numJSONResponsesRecved = 0;
     netstats->numJSONRequestsSent = 0;
     netstats->numJSONResponsesSent = 0;
-    
-    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_14, 0);
-    SYS_PORTS_PinWrite(0, PORT_CHANNEL_G, PORTS_BIT_POS_1, 0);
-    
+   move_wheels(0,0);
     
     network_send_add_message(&netstats_message);
 
@@ -144,6 +147,7 @@ void PROCESSING_Tasks() {
                     } break;
                     case NR_REQ_NAME:
                     {
+                        //my_rover.got_name = true;
                         send_message.type = NS_SEND_NAME_JOSH;
                         network_send_add_message(&send_message);
                     } break;
@@ -166,16 +170,19 @@ void PROCESSING_Tasks() {
             } break;
             case PR_PWM:
             {
-                send_message.type = NS_PWM;
-                my_rover.ticks.tick_left += recv_message.data.timer.tmr4;
-                my_rover.ticks.tick_right += recv_message.data.timer.tmr3;
-                
-                
-                send_message.data.tmr.speed_left= recv_message.data.timer.speed_left;
-                send_message.data.tmr.speed_right = recv_message.data.timer.speed_right;
-                send_message.data.tmr.tmr3= my_rover.ticks.tick_right;
-                send_message.data.tmr.tmr4 = my_rover.ticks.tick_left;
-                network_send_add_message(&send_message);
+                if(my_rover.got_name)
+                {
+                    send_message.type = NS_PWM;
+                    my_rover.ticks.tick_left += recv_message.data.timer.tmr4;
+                    my_rover.ticks.tick_right += recv_message.data.timer.tmr3;
+
+
+                    send_message.data.tmr.speed_left= recv_message.data.timer.speed_left;
+                    send_message.data.tmr.speed_right = recv_message.data.timer.speed_right;
+                    send_message.data.tmr.tmr3= my_rover.ticks.tick_right;
+                    send_message.data.tmr.tmr4 = my_rover.ticks.tick_left;
+                    network_send_add_message(&send_message);   
+                }
             }break;
             default:
                 break;
@@ -185,8 +192,12 @@ void PROCESSING_Tasks() {
         {
             case ROVER_INIT:
             {
-                blocks = 0;
-                my_rover.rover_state = ROVER_MOVE;
+                my_rover.ticks.tick_right = 0;
+                my_rover.ticks.tick_left = 0;
+                if(my_rover.got_name){
+                    blocks = 0;
+                    my_rover.rover_state = ROVER_MOVE;
+                }
             }break;
             case ROVER_MOVE:
             {
@@ -197,47 +208,115 @@ void PROCESSING_Tasks() {
                     my_rover.ticks.tick_left = 0;
                     my_rover.ticks.tick_right = 0;
                 }
+                
+                my_rover.ticks.tick_right = 0;
+                my_rover.ticks.tick_left = 0;
                 pwm.wanted_speed_right = 2e-1;
                 pwm.wanted_speed_left = 2e-1;
+                move_wheels(1,0);//right rotate
+                //move_wheels(0,1);//left rotate
+                
                 interrupt_add_pwm(&pwm);
-                //my_rover.rover_state = ROVER_WAIT;
+                my_rover.rover_state = ROVER_ROTATE_R;
             }break;
             case ROVER_WAIT:
             {
 //                pwm.wanted_speed_right = 2e-1;
 //                pwm.wanted_speed_left = 2e-1;
-                if(my_rover.ticks.tick_right >= 150)
-                {
-                    pwm.wanted_speed_right = 2e-3;
-                }
-                else if(my_rover.ticks.tick_right >= 200)
-                {
+                if(my_rover.ticks.tick_right == TEN_CM(2))
+                {                 
                     my_rover.ticks.tick_right = 0;
-                    pwm.wanted_speed_right = 9e-4;
                     my_rover.stop_right = true;
                 }
-                
-                if(my_rover.ticks.tick_left >= 150)
+                else if(my_rover.ticks.tick_right == 130)
                 {
-                    pwm.wanted_speed_left = 2e-3;
+                    my_rover.slow_right = true;
                 }
-                else if(my_rover.ticks.tick_left >= 200){
-                    pwm.wanted_speed_left = 9e-4;            
+                
+                if(my_rover.ticks.tick_left == TEN_CM(2))
+                {         
                     my_rover.ticks.tick_left= 0;
                     my_rover.stop_left = true;
                 }
+                else if(my_rover.ticks.tick_left == 130)
+                {
+                    my_rover.slow_left = true;
+                }
+                
+                
+                if(my_rover.slow_right && my_rover.slow_left)
+                {
+                    pwm.wanted_speed_left = 1.5e-1;
+                    pwm.wanted_speed_right = 1.5e-1;
+                    my_rover.slow_left = false;
+                    my_rover.slow_right = false;
+                }
+                
+
                 if(my_rover.stop_left && my_rover.stop_right){
                     blocks++;
                     my_rover.rover_state = ROVER_STOP;
+                    pwm.wanted_speed_right =0;
+                    pwm.wanted_speed_left = 0;   
                     if(blocks < 1)
                         my_rover.rover_state = ROVER_INIT;
                 }
 
                 interrupt_add_pwm(&pwm);
             }break;
+            case ROVER_ROTATE_R:
+            {
+                //unsigned rotate = 60;
+                if(my_rover.ticks.tick_right == ROTATE(2))
+                {                 
+                    my_rover.ticks.tick_right = 0;
+                    my_rover.stop_right = true;
+                }
+                if(my_rover.ticks.tick_left == ROTATE(2))
+                {         
+                    my_rover.ticks.tick_left= 0;
+                    my_rover.stop_left = true;
+                }
+                if(my_rover.stop_left && my_rover.stop_right){
+                    blocks++;
+                    my_rover.rover_state = ROVER_STOP;
+                    pwm.wanted_speed_right =0;
+                    pwm.wanted_speed_left = 0;   
+                    if(blocks < 1)
+                        my_rover.rover_state = ROVER_INIT;
+                }
+                
+                interrupt_add_pwm(&pwm);
+            }break;
+            case ROVER_ROTATE_L:
+            {
+                //unsigned rotate = 60;
+                if(my_rover.ticks.tick_right == ROTATE(1))
+                {                 
+                    my_rover.ticks.tick_right = 0;
+                    my_rover.stop_right = true;
+                }
+                if(my_rover.ticks.tick_left == ROTATE(1))
+                {         
+                    my_rover.ticks.tick_left= 0;
+                    my_rover.stop_left = true;
+                }
+                if(my_rover.stop_left && my_rover.stop_right){
+                    blocks++;
+                    my_rover.rover_state = ROVER_STOP;
+                    pwm.wanted_speed_right =0;
+                    pwm.wanted_speed_left = 0;   
+                    if(blocks < 1)
+                        my_rover.rover_state = ROVER_INIT;
+                }
+                
+                interrupt_add_pwm(&pwm);
+            }break;
             case ROVER_STOP:
             {
-                
+                pwm.wanted_speed_right =0;
+                pwm.wanted_speed_left = 0;
+                interrupt_add_pwm(&pwm);
             }break;
             default:
                 break;
@@ -246,7 +325,11 @@ void PROCESSING_Tasks() {
     }
 }
 
-
+void move_wheels(unsigned right, unsigned left)
+{
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_14, right);
+    SYS_PORTS_PinWrite(0, PORT_CHANNEL_G, PORTS_BIT_POS_1, left);
+}
 /*******************************************************************************
  End of File
  */
