@@ -26,6 +26,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "processing.h"
 #include "network/send.h"
 #include "debug.h"
+#include "int_adc.h"
 
 QueueHandle_t processing_queue;
 
@@ -55,7 +56,7 @@ void processing_add_adc_reading(unsigned adc_sample){
 }
 
 void PROCESSING_Initialize() {
-    processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
+    processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(PRMessage));
 }
 
 void PROCESSING_Tasks() {
@@ -107,7 +108,11 @@ void PROCESSING_Tasks() {
             
             case PR_ADC:
             {
-                // TODO: Process ADC data.
+                netstats->numJSONResponsesSent++;
+                unsigned sample = recv_message.data.adc_sample;
+                send_message.type = NS_DEBUG_GEORDON_ADC;
+                send_message.data.adc_reading = sample;
+                network_send_add_message(&send_message);
             } break;
             
             default:
