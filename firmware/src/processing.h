@@ -76,14 +76,25 @@ typedef struct{
     uint32_t tick_left;
     uint32_t tick_right;
 }pwm_ticks;
+
 typedef struct{
-    pwm_ticks ticks;
-    RStates rover_state;
+    uint8_t test_move_val;
+    uint8_t test_rotate_val;
+}debug_vals;
+typedef struct{
     bool stop_left;
     bool stop_right;
     bool slow_left;
     bool slow_right;
     bool got_name;
+    bool test_move;
+    bool test_rotate;
+}boolean_vals;
+typedef struct{
+    pwm_ticks ticks;
+    RStates rover_state;
+    boolean_vals bools;
+    debug_vals debug_test;
 }rover;
 
 typedef struct {
@@ -98,10 +109,11 @@ typedef struct{
 
 void processing_add_recvmsg(NRMessage *message); 
 void interrupt_add_pwm(pwm_to_isr *pwm);
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4, double left_error, double right_error);
 void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4);
 void move_wheels(unsigned right, unsigned left);
 void enable_init();
+void init_rover();
 void PROCESSING_Initialize();
 void PROCESSING_Tasks();
 

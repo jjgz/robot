@@ -77,6 +77,7 @@ QueueHandle_t interrupt_queue;
 double wanted_speed_left;
 double wanted_speed_right;
 const double desired_speed = 2e-1;
+unsigned counter = 0;
 #define SPEED_TICKS 1000
 // *****************************************************************************
 // *****************************************************************************
@@ -111,15 +112,17 @@ void IntHandlerDrvTmrInstance2(void)
     }
  
     const double left_scale = 1.0;
-    const double right_scale = 1.022;
-    uint16_t output_right = clamp(pid_output(&controller_right, wanted_speed_right - right_scale * (double)DRV_TMR0_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
-    uint16_t output_left = clamp(pid_output(&controller_left, wanted_speed_left - left_scale * (double)DRV_TMR1_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
+    const double right_scale = 1.020;
+    uint16_t output_right = clamp(pid_output(&controller_right, wanted_speed_right - right_scale * (double)DRV_TMR1_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
+    double right_error = controller_right.accumulator;
+    uint16_t output_left = clamp(pid_output(&controller_left, wanted_speed_left - left_scale * (double)DRV_TMR0_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
+    double left_error = controller_left.accumulator;
     
-    processing_add_pwm_reading(output_left,output_right,DRV_TMR0_CounterValueGet(),DRV_TMR1_CounterValueGet());
+    processing_add_pwm_reading(output_left,output_right,DRV_TMR0_CounterValueGet(),DRV_TMR1_CounterValueGet(), left_error,right_error);
     DRV_TMR0_CounterClear();
     DRV_TMR1_CounterClear();
-    PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_right);
-    PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_left);
+    PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_left);
+    PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_right);
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_5);
 }
     
