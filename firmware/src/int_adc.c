@@ -2,6 +2,8 @@
 #include "network/send.h"
 #include "debug.h"
 
+// CHANGE VALUE FOR FASTER SENSOR READING
+// LESS: faster readings <50>
 #define NUM_SAMPLES_BEFORE_SEND 500
 
 unsigned samples_collected;
