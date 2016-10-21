@@ -68,7 +68,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 /*** DEVCFG1 ***/
 
 #pragma config FNOSC =      FRCPLL
-#pragma config FSOSCEN =    ON
+#pragma config FSOSCEN =    OFF
 #pragma config IESO =       ON
 #pragma config POSCMOD =    OFF
 #pragma config OSCIOFNC =   OFF
@@ -170,10 +170,6 @@ void SYS_Initialize ( void* data )
     SYS_PORTS_Initialize();
 
     /* Initialize Drivers */
-
-    /* Initialize ADC */
-    DRV_ADC_Initialize();
-
     /* Initialize the OC Driver */
     DRV_OC0_Initialize();
     DRV_OC1_Initialize();
@@ -183,6 +179,8 @@ void SYS_Initialize ( void* data )
     DRV_TMR1_Initialize();
     /*Initialize TMR2 */
     DRV_TMR2_Initialize();
+    /*Initialize TMR3 */
+    DRV_TMR3_Initialize();
  
      sysObj.drvUsart0 = DRV_USART_Initialize(DRV_USART_INDEX_0, (SYS_MODULE_INIT *)NULL);
     SYS_INT_VectorPrioritySet(INT_VECTOR_UART1, INT_PRIORITY_LEVEL1);

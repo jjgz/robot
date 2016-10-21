@@ -47,41 +47,6 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "ISR_Support.h"
 
-/* ADC Interrupt */
-   .extern  IntHandlerDrvAdc
-
-   .section	.vector_27,code, keep
-   .equ     __vector_dispatch_27, IntVectorDrvAdc
-   .global  __vector_dispatch_27
-   .set     nomicromips
-   .set     noreorder
-   .set     nomips16
-   .set     noat
-   .ent  IntVectorDrvAdc
-
-IntVectorDrvAdc:
-    la    $26,  _IntHandlerDrvAdc         
-    jr    $26
-    nop
-	.end	IntVectorDrvAdc
-
-   .section	.DrvAdc_vector_text, code, keep
-   .set     nomicromips
-   .set     noreorder
-   .set     nomips16
-   .set     noat
-   .ent  _IntHandlerDrvAdc
-
-_IntHandlerDrvAdc:
-    portSAVE_CONTEXT
-    la    s6,  IntHandlerDrvAdc
-    jalr  s6
-    nop
-    portRESTORE_CONTEXT
-    .end	_IntHandlerDrvAdc
-
-
-
 
 /* TMR Instance 0 Interrupt */
    .extern  IntHandlerDrvTmrInstance0
@@ -183,6 +148,40 @@ _IntHandlerDrvTmrInstance2:
     nop
     portRESTORE_CONTEXT
     .end	_IntHandlerDrvTmrInstance2
+
+
+/* TMR Instance 3 Interrupt */
+   .extern  IntHandlerDrvTmrInstance3
+
+   .section	.vector_8,code, keep
+   .equ     __vector_dispatch_8, IntVectorDrvTmrInstance3
+   .global  __vector_dispatch_8
+   .set     nomicromips
+   .set     noreorder
+   .set     nomips16
+   .set     noat
+   .ent  IntVectorDrvTmrInstance3
+
+IntVectorDrvTmrInstance3:
+    la    $26,  _IntHandlerDrvTmrInstance3         
+    jr    $26
+    nop
+	.end	IntVectorDrvTmrInstance3
+
+   .section	.DrvTmrInstance3_vector_text, code, keep
+   .set     nomicromips
+   .set     noreorder
+   .set     nomips16
+   .set     noat
+   .ent  _IntHandlerDrvTmrInstance3
+
+_IntHandlerDrvTmrInstance3:
+    portSAVE_CONTEXT
+    la    s6,  IntHandlerDrvTmrInstance3
+    jalr  s6
+    nop
+    portRESTORE_CONTEXT
+    .end	_IntHandlerDrvTmrInstance3
 
 
 

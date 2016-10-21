@@ -40,8 +40,8 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "system_definitions.h"
 
 #include "network/recv.h"
-#define MY_NAME "Joshua Chung"
-#define PROCESSING_QUEUE_LEN 5
+#define MY_NAME "Joe Gdaniec"
+#define PROCESSING_QUEUE_LEN 10
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
 
@@ -52,26 +52,64 @@ extern "C" {
 typedef enum {
     PR_ADC,
     PR_NR,
+    PR_PWM,
+    PR_TMR,
+    //PR_DEBUG,
 } PRType;
+
+typedef enum {
+    LEADER_INIT,
+            LEADER_MOVE,
+            LEADER_WAIT,
+            LEADER_RIGHT,
+            LEADER_LEFT,
+            LEADER_STOP,
+            LEADER_BACK,
+}LStates;
 
 typedef union {
     NRMessage nr_message;
     unsigned adc_sample;
+    TimerDebug timer;
+    bool left_mvmnt;
+    bool right_mvmnt;
+    MSGDebugJoeTread debug_joe_tread;
 } PRUnion;
+
+typedef struct{
+    uint32_t prev_left;
+    uint32_t prev_right;
+    uint32_t t_right;
+    uint32_t t_left;
+}pwm_ticks;
 
 typedef struct {
     PRType type;
     PRUnion data;
 } PRMessage;
 
+typedef struct{
+    double target_left_spd;
+    double target_right_spd;
+}pwm_to_isr;
+
 typedef struct {
-    uint32_t time_r;
-    uint32_t time_l;
-    uint32_t last_rmotor;
-    uint32_t last_lmotor;
+    pwm_ticks ticks;
+    LStates lead_state;
+    bool stop_left;
+    bool stop_right;
+    bool slow_left;
+    bool slow_right;
+    //uint32_t time_r;
+    //uint32_t time_l;
+    //uint32_t last_rmotor;
+    //uint32_t last_lmotor;
 }leader;
 void processing_add_recvmsg(NRMessage *message);
-
+void interrupt_add_pwm(pwm_to_isr *pwm);
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
+void enable_start();
+void leader_move(unsigned right, unsigned left);
 void PROCESSING_Initialize();
 void PROCESSING_Tasks();
 

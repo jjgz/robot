@@ -65,23 +65,41 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "int_adc.h"
 #include "system_definitions.h"
 #include "framework/driver/adc/drv_adc_static.h"
+#include "pid/pid.h"
+#include "peripheral/oc/plib_oc.h"
+#include "math.h"
+#include "processing.h"
+#include "system_config.h"
+#include "portmacro.h"
+Pid pid_right;
+Pid pid_left;
+double  target_right_spd;
+double  target_left_spd;
+const double desired_speed = 2e-1;
+QueueHandle_t interrupt_queue;
+unsigned couner = 0;
+#define SPEED_TICKS 1000
 
 // *****************************************************************************
 // *****************************************************************************
 // Section: System Interrupt Vector Functions
 // *****************************************************************************
 // *****************************************************************************
-void IntHandlerDrvAdc(void)
-{
-    //debug_loc(DEBUG_INTADC_ENTER);
-    if (DRV_ADC_SamplesAvailable()) {
-        int_adc_sample(PLIB_ADC_ResultGetByIndex(DRV_ADC_ID_1, 0));
-    }
-    PLIB_ADC_SampleAutoStartEnable(DRV_ADC_ID_1);
-    /* Clear ADC Interrupt Flag */
-    PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_ADC_1);
-    //debug_loc(DEBUG_INTADC_LEAVE);
+
+double clamp(double val, double min, double max){
+    return min(max, max(min, val));
 }
+//void IntHandlerDrvAdc(void)
+//{
+    //debug_loc(DEBUG_INTADC_ENTER);
+    //if (DRV_ADC_SamplesAvailable()) {
+    //    int_adc_sample(PLIB_ADC_ResultGetByIndex(DRV_ADC_ID_1, 0));
+    //}
+    //PLIB_ADC_SampleAutoStartEnable(DRV_ADC_ID_1);
+    /* Clear ADC Interrupt Flag */
+   // PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_ADC_1);
+    //debug_loc(DEBUG_INTADC_LEAVE);
+//}
 
 void IntHandlerDrvTmrInstance0(void)
 {
@@ -95,10 +113,35 @@ void IntHandlerDrvTmrInstance1(void)
 }
 void IntHandlerDrvTmrInstance2(void)
 {
-    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_5);
+    //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+    pwm_to_isr recv_pwm;
+    if(!xQueueIsQueueEmptyFromISR(interrupt_queue))
+    {
+        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1,1);
+        xQueueReceiveFromISR(interrupt_queue, &recv_pwm, 0);
+        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+        target_right_spd = recv_pwm.target_right_spd;
+        target_left_spd = recv_pwm.target_left_spd;
+    }
+    const double scaling_left = 1.0;
+    const double scaling_right = 1.020;
+    uint16_t output_r = clamp(pid_output(&pid_right, target_right_spd - scaling_right * (double)DRV_TMR1_CounterValueGet(),1e1,1e3,0),0,65535);
+    uint16_t output_l = clamp(pid_output(&pid_left,  target_left_spd - scaling_left * (double)DRV_TMR0_CounterValueGet(),1e1,1e3,0),0,65535);
+   
+    processing_add_pwm_reading(output_l, output_r, DRV_TMR0_CounterValueGet(), DRV_TMR1_CounterValueGet());
+    DRV_TMR0_CounterClear();
+    DRV_TMR1_CounterClear();
+    //SYS_PORTS_PinWrite(0,PORT_CHANNEL_D, PORTS_BIT_POS_1,1);
+    //SYS_PORTS_PinWrite(0,PORT_CHANNEL_D, PORTS_BIT_POS_0,1);
+    PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_r);
+    PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_l);
+    PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_TIMER_5);
 }
 
-
+void IntHandlerDrvTmrInstance3(void)
+{
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
+}
 
 void IntHandlerDrvUsartInstance0(void)
 {
