@@ -41,7 +41,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "network/recv.h"
 #define MY_NAME "Joe Gdaniec"
-#define PROCESSING_QUEUE_LEN 10
+#define PROCESSING_QUEUE_LEN 5
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
 
@@ -65,14 +65,12 @@ typedef enum {
             LEADER_LEFT,
             LEADER_STOP,
             LEADER_BACK,
+            LEADER_STALL,
 }LStates;
 
 typedef union {
-    NRMessage nr_message;
-    unsigned adc_sample;
-    TimerDebug timer;
-    bool left_mvmnt;
-    bool right_mvmnt;
+    NRMessage nr_message;    
+    TimerDebug timer;   
     MSGDebugJoeTread debug_joe_tread;
 } PRUnion;
 
@@ -100,14 +98,13 @@ typedef struct {
     bool stop_right;
     bool slow_left;
     bool slow_right;
-    //uint32_t time_r;
-    //uint32_t time_l;
-    //uint32_t last_rmotor;
-    //uint32_t last_lmotor;
+    bool got_cmnd;    
 }leader;
+
 void processing_add_recvmsg(NRMessage *message);
 void interrupt_add_pwm(pwm_to_isr *pwm);
 void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
+void processing_change_rover_state(uint32_t timer_state);
 void enable_start();
 void leader_move(unsigned right, unsigned left);
 void PROCESSING_Initialize();
