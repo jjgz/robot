@@ -30,6 +30,13 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #define TEN_CM(a) (750*a)
 #define ROTATE(a) (650*a)
+#define X_SCALE(a) (a*10)
+
+#define MAX_GRID 20
+#define X 4
+#define Y 5
+#define MAX_WEIGHT 500
+
 extern Pid controller_right;
 extern Pid controller_left;
 QueueHandle_t processing_queue;
@@ -40,6 +47,31 @@ extern double wanted_speed_right;
 unsigned output_right_avg;
 unsigned output_left_avg;
 uint16_t processing_counter;
+
+//**********************************************************
+//**Everything below to the stars (*) is for the pathfinding
+unsigned target = 34;
+unsigned short int edges_size;
+//unsigned short int next_edges_size;
+edges EDGES[MAX_GRID];
+edges NEXT_EDGES[MAX_GRID];
+edges path_to_go[MAX_GRID];
+tiles my_world[X][Y];
+
+//path_index is the size of the path array that contains all the points to the target
+unsigned path_index;
+unsigned target;
+
+//this is essentially a boolean to check if there is indeed a path..if there isnt a path dont move
+uint8_t no_path;
+
+//map_size is how your indexer for the path_to_go array..compare it to path_index (i.e. if(map_size < path_index))
+//unsigned x = path_to_go[map_size].xy/10 - mover.position.x;
+//unsigned y = path_to_go[map_size].xy%10 - mover.position.y;
+unsigned map_size;
+//***********************************************************
+//**********************************************************
+
 void enable_init()
 {
     pid_start(&controller_left);
@@ -62,12 +94,15 @@ void enable_init()
     output_left_avg = 0;
     output_right_avg = 0;
     processing_counter = 0;
+    map_size = 0;
     init_rover();
+    map_init();
 }
 void init_rover()
 {
-    my_rover.ticks.prev_left = 0;
-    my_rover.ticks.prev_right = 0;
+    my_rover.rover_state = ROVER_INIT;
+    my_rover.xy_points.x = 0;
+    my_rover.xy_points.y = 0;
     my_rover.ticks.tick_left = 0;
     my_rover.ticks.tick_right = 0;
     my_rover.bools.stop_left = false;
@@ -78,6 +113,177 @@ void init_rover()
     my_rover.bools.test_move = false;
     my_rover.bools.test_rotate = false;
 }
+void map_init()
+{
+ 	my_world[0][0].weight = 10;
+	my_world[0][1].weight = 20;
+	my_world[0][2].weight = 20;
+	my_world[0][3].weight = 7;
+	my_world[0][4].weight = 5;
+
+	my_world[1][0].weight = 20;
+	my_world[1][1].weight = MAX_WEIGHT;
+	my_world[1][2].weight = 50;
+	my_world[1][3].weight = 10;
+	my_world[1][4].weight = 7;
+
+	my_world[2][0].weight = 30;
+	my_world[2][1].weight = 40;
+	my_world[2][2].weight = MAX_WEIGHT;
+	my_world[2][3].weight = 30;
+	my_world[2][4].weight = 10;
+
+	my_world[3][0].weight = MAX_WEIGHT;
+	my_world[3][1].weight = 60;
+	my_world[3][2].weight = MAX_WEIGHT;
+	my_world[3][3].weight = 30;
+	my_world[3][4].weight = 0;
+}
+
+void init_world_diff()
+{
+    	//go through x
+    int i,j;
+	for (i = 0; i < 4; i++)
+	{
+		//go through y
+		for (j = 0; j < 5; j++)
+		{
+			my_world[i][j].difficulty = 1000;
+		}
+	}
+}
+void path_init()
+{
+    no_path = 1;
+    path_index = 0;
+	edges_size = 0;
+    //WHERE YOU ASSIGN TARGET
+	target = 34; //its at position <3,4>
+    int i;
+	for (i = 0; i < MAX_GRID; i++)
+		path_to_go[i].xy = -1;
+}
+
+void my_path()
+{
+    unsigned find = 1;
+	unsigned total = MAX_GRID;
+	//my_world[my_pos / 10][my_pos%10].
+	int x = my_rover.xy_points.x;
+	int y = my_rover.xy_points.y;
+	//just in case
+	if (x == target / 10 && y == target % 10){
+		find = 0;
+		path_to_go[0].xy = (x*10) + y;
+        no_path = 0;
+	}
+
+	int index = (x*10) + y;
+	while (find && total)
+	{
+			int min;
+			if (x + 1 < 4)
+			{
+				index = (x+1)*10 + y;
+				min = my_world[x + 1][y].difficulty;
+			}
+			else
+			{
+				index = (x+1)*10 + y;
+				min = my_world[x - 1][y].difficulty;
+			}
+
+			if (my_world[x - 1][y].difficulty < min && x - 1 >= 0 && my_world[x - 1][y].difficulty < 100)
+			{
+				min = my_world[x - 1][y].difficulty;
+				index = (x-1)*10 + y;
+			}
+			if (my_world[x + 1][y].difficulty < min && x + 1 < 4 && my_world[x + 1][y].difficulty < 100)
+			{
+				
+				min = my_world[x + 1][y].difficulty;
+				index = (x+1)*10 + y;
+			}
+			if (my_world[x][y + 1].difficulty < min && y + 1 < 5 && my_world[x][y+1].difficulty < 100)
+			{
+				min = my_world[x][y+1].difficulty;
+				index = (X_SCALE(x)) + y + 1;
+			}
+			if (my_world[x][y - 1].difficulty < min && y - 1 >= 0 && my_world[x][y-1].difficulty < 100)
+			{
+				min = my_world[x - 1][y].difficulty;
+				index = (X_SCALE(x)) + y - 1;
+			}
+
+			if (index / 10 == target / 10 && index % 10 == target % 10){
+				find = 0;
+                no_path = 0;
+            }
+			
+			if (min < 100)
+				path_to_go[path_index++].xy = index;
+            debug_loc(index);
+			x = index / 10;
+			y = index % 10;
+			total--;
+	}
+}
+void find_path()
+{
+    init_world_diff();
+	my_world[target / 10][target % 10].difficulty = 0;
+	my_world[target / 10][target % 10].weight = 0;
+	EDGES[0].xy = target;//<3,4>
+	edges_size = 1;
+	while (edges_size)
+	{
+		int j = 0;
+		int i;
+		for (i = 0; i < edges_size; i++)
+		{
+			int x = EDGES[i].xy / 10; //the current tile
+			int y = EDGES[i].xy % 10; //the current tile
+			
+			unsigned short int world_diff_n = my_world[x][y].difficulty + my_world[x][y+1].weight;
+			unsigned short int world_diff_s = my_world[x][y].difficulty + my_world[x][y-1].weight;
+			unsigned short int world_diff_e = my_world[x][y].difficulty + my_world[x+1][y].weight;
+			unsigned short int world_diff_w = my_world[x][y].difficulty + my_world[x-1][y].weight;
+
+			if (world_diff_n < my_world[x][y + 1].difficulty && y+1 < 5)
+			{
+				NEXT_EDGES[j].xy = EDGES[i].xy + 1; //for north
+				my_world[x][y + 1].difficulty = world_diff_n;
+				j++;
+			}
+			if (world_diff_s < my_world[x][y - 1].difficulty && y - 1 >= 0)
+			{
+				NEXT_EDGES[j].xy = EDGES[i].xy - 1; //for south
+				my_world[x][y - 1].difficulty = world_diff_s;
+				j++;
+			}
+			if (world_diff_e < my_world[x+1][y].difficulty && x+1 < 4)
+			{
+				NEXT_EDGES[j].xy = EDGES[i].xy + 10; //for east
+				my_world[x+1][y].difficulty = world_diff_e;
+				j++;
+			}
+			if (world_diff_w < my_world[x-1][y].difficulty && x-1 >= 0)
+			{
+				NEXT_EDGES[j].xy = EDGES[i].xy - 10; //for west
+				my_world[x-1][y].difficulty = world_diff_w;
+				j++;
+			}
+		}
+		int k;
+		for (k = 0; k < j; k++)
+			EDGES[k].xy = NEXT_EDGES[k].xy;
+		edges_size = j;
+		//print_world();
+		//print_edges();
+	}
+}
+
 void processing_add_recvmsg(NRMessage *message) {
     PRMessage pr_message;
     pr_message.type = PR_NR;
@@ -264,20 +470,19 @@ void PROCESSING_Tasks() {
                 //move_wheels(0,1);//left rotate
                 
                 interrupt_add_pwm(&pwm);
-                my_rover.rover_state = ROVER_WAIT;
+                my_rover.rover_state = ROVER_BLOCK;
                 if(my_rover.bools.test_rotate){
                     move_wheels(1,0);//right rotate
                     my_rover.rover_state = ROVER_ROTATE_R;
                 }
                 
             }break;
-            case ROVER_WAIT:
+            
+            //***********************************
+            //TODO: Move this all into a function + create the move block functions
+            //***********************************
+            case ROVER_BLOCK:
             {
-//                pwm.wanted_speed_right = 2e-1;
-//                pwm.wanted_speed_left = 2e-1;
-                
-                SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
-             
                 if(my_rover.ticks.tick_right >= TEN_CM(my_rover.debug_test.test_move_val))
                 {                 
                     my_rover.ticks.tick_right = 0;
@@ -319,6 +524,11 @@ void PROCESSING_Tasks() {
 
                 interrupt_add_pwm(&pwm);
             }break;
+            
+            //***********************************
+            //TODO: Move this all into a function + create the rotate functions
+            //TODO2: Make the network signals for ROVER_ROTATE_R and ROVER_ROTATE_L -- mainly for debugging
+            //***********************************
             case ROVER_ROTATE_R:
             {
                 //unsigned rotate = 60;
@@ -348,6 +558,7 @@ void PROCESSING_Tasks() {
                 
                 interrupt_add_pwm(&pwm);
             }break;
+            
             case ROVER_ROTATE_L:
             {
                 //unsigned rotate = 60;

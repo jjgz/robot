@@ -55,13 +55,26 @@ typedef enum {
     PR_PWM,
 } PRType;
 
+typedef struct
+{
+    //this value determines if there is something in the block (i.e item or object) 0-65
+    unsigned difficulty;
+    unsigned weight;
+    
+}tiles;
+
+typedef struct
+{
+	short int xy;
+}edges;
+
 typedef enum{
     ROVER_INIT,
-            ROVER_MOVE,
-            ROVER_WAIT,
-            ROVER_ROTATE_R,
-            ROVER_ROTATE_L,
-            ROVER_STOP,
+    ROVER_MOVE,
+    ROVER_BLOCK,
+    ROVER_ROTATE_R,
+    ROVER_ROTATE_L,
+    ROVER_STOP,
 }RStates;
 
 
@@ -71,8 +84,6 @@ typedef union {
 } PRUnion;
 
 typedef struct{
-    uint32_t prev_left;
-    uint32_t prev_right;
     uint32_t tick_left;
     uint32_t tick_right;
 }pwm_ticks;
@@ -95,6 +106,7 @@ typedef struct{
     RStates rover_state;
     boolean_vals bools;
     debug_vals debug_test;
+    MSGPoint xy_points;
 }rover;
 
 typedef struct {
@@ -116,6 +128,11 @@ void enable_init();
 void init_rover();
 void PROCESSING_Initialize();
 void PROCESSING_Tasks();
+void map_init();
+void find_path();
+void my_path();
+void path_init();
+void init_world_diff();
 
 #endif /* _PROCESSING_H */
 
