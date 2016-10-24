@@ -38,7 +38,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include <stdlib.h>
 #include "system_config.h"
 #include "system_definitions.h"
-
+#include "network/common.h"
 #include "network/recv.h"
 #define MY_NAME "Geordon Worley"
 #define PROCESSING_QUEUE_LEN 5
@@ -72,11 +72,12 @@ typedef enum{
     ROVER_INIT,
     ROVER_MOVE,
     ROVER_BLOCK,
-    ROVER_ROTATE_R,
-    ROVER_ROTATE_L,
+    ROVER_ROTATE,
     ROVER_STOP,
+            ROVER_FIND_DIR,
+            ROVER_FIND_PATH,
+            MY_ROVER_CHANGE_ORI,
 }RStates;
-
 
 typedef union {
     NRMessage nr_message;
@@ -92,6 +93,11 @@ typedef struct{
     uint8_t test_move_val;
     uint8_t test_rotate_val;
 }debug_vals;
+
+typedef struct{
+    uint16_t rotate_val;
+}rotate_val;
+
 typedef struct{
     bool stop_left;
     bool stop_right;
@@ -100,13 +106,18 @@ typedef struct{
     bool got_name;
     bool test_move;
     bool test_rotate;
+    bool rotate;
 }boolean_vals;
+
 typedef struct{
     pwm_ticks ticks;
     RStates rover_state;
     boolean_vals bools;
     debug_vals debug_test;
     MSGPoint xy_points;
+    rotate_val value;
+    orientation ori;
+    orientation next_ori;
 }rover;
 
 typedef struct {
@@ -133,7 +144,7 @@ void find_path();
 void my_path();
 void path_init();
 void init_world_diff();
-
+void change_direction(unsigned turn_left, uint16_t degree, orientation dir);
 #endif /* _PROCESSING_H */
 
 //DOM-IGNORE-BEGIN

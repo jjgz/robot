@@ -66,8 +66,8 @@ unsigned target;
 uint8_t no_path;
 
 //map_size is how your indexer for the path_to_go array..compare it to path_index (i.e. if(map_size < path_index))
-//unsigned x = path_to_go[map_size].xy/10 - mover.position.x;
-//unsigned y = path_to_go[map_size].xy%10 - mover.position.y;
+//unsigned x = path_to_go[map_size].xy/10 - my_rover.position.x;
+//unsigned y = path_to_go[map_size].xy%10 - my_rover.position.y;
 unsigned map_size;
 //***********************************************************
 //**********************************************************
@@ -101,6 +101,7 @@ void enable_init()
 void init_rover()
 {
     my_rover.rover_state = ROVER_INIT;
+    //your location
     my_rover.xy_points.x = 0;
     my_rover.xy_points.y = 0;
     my_rover.ticks.tick_left = 0;
@@ -112,6 +113,7 @@ void init_rover()
     my_rover.bools.got_name = false;
     my_rover.bools.test_move = false;
     my_rover.bools.test_rotate = false;
+    my_rover.bools.rotate = true;
 }
 void map_init()
 {
@@ -180,7 +182,9 @@ void my_path()
 	}
 
 	int index = (x*10) + y;
-	while (find && total)
+    //GET RID OF WHILE LOOP AND MAKE IT SUCH THAT YOU JSUT FIND the NEXT PATH
+	//AND JUST RETURN INDEX
+    while (find && total)
 	{
 			int min;
 			if (x + 1 < 4)
@@ -284,6 +288,17 @@ void find_path()
 	}
 }
 
+void change_direction(unsigned turn_left, uint16_t degree, orientation dir)
+{
+    move_wheels(1,0);
+    if(turn_left)
+        move_wheels(0,1);
+    my_rover.bools.rotate = true;
+    my_rover.value.rotate_val = ROTATE(degree);
+    my_rover.ori = dir;
+}
+
+
 void processing_add_recvmsg(NRMessage *message) {
     PRMessage pr_message;
     pr_message.type = PR_NR;
@@ -302,11 +317,11 @@ void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm,uint32_t t
 
        my_rover.ticks.tick_left += tmr4;
        my_rover.ticks.tick_right += tmr3;
-       if(processing_counter == 50)
+       if(processing_counter == 80)
        {
            processing_counter = 0;
-           output_left_avg = output_left_avg/50;
-           output_right_avg = output_right_avg/50;
+           output_left_avg = output_left_avg/80;
+           output_right_avg = output_right_avg/80;
            PRMessage pr_adc_message;
            pr_adc_message.type = PR_PWM;
            pr_adc_message.data.timer.speed_left = output_left_avg;
@@ -410,7 +425,6 @@ void PROCESSING_Tasks() {
                      }break;
                      case NR_TEST_RESET:
                      {
-                        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 0);
                         init_rover();
                         my_rover.bools.got_name = true;
                         pwm.wanted_speed_right = 0;
@@ -453,13 +467,135 @@ void PROCESSING_Tasks() {
         {
             case ROVER_INIT:
             {
+                my_rover.ori = SOUTH;
                 my_rover.ticks.tick_right = 0;
                 my_rover.ticks.tick_left = 0;
+                //if you wanna test rotation via debug assign next_ori and current_ori and go to state ROVER_MOVE
                 if(my_rover.bools.got_name && (my_rover.bools.test_rotate || my_rover.bools.test_move)){
                     blocks = 0;
-                    my_rover.rover_state = ROVER_MOVE;
+                    my_rover.rover_state = ROVER_FIND_PATH;
                 }
             }break;
+            case ROVER_FIND_PATH:
+            {
+                pwm.wanted_speed_right =0;
+                pwm.wanted_speed_left = 0;
+                interrupt_add_pwm(&pwm);
+                path_index = 0;
+                find_path();
+                my_path();
+                if(!no_path)
+                    my_rover.rover_state = ROVER_FIND_DIR;
+            }break;
+            case ROVER_FIND_DIR:
+            {
+                
+               // SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+//                pwm.wanted_speed_right =0;
+//                pwm.wanted_speed_left = 0;
+//                interrupt_add_pwm(&pwm);
+                unsigned x = path_to_go[map_size].xy/10 - my_rover.xy_points.x;
+                unsigned y = path_to_go[map_size].xy%10 - my_rover.xy_points.y;
+                 
+                //****************************************************
+                if(x)
+                {
+                    //debug_loc(20);
+                    my_rover.next_ori = WEST;
+                    if(x > 0) //move east
+                    {
+                        //debug_loc(22);
+                        my_rover.next_ori = EAST;
+                    }
+                }
+                else if(y)
+                {
+                   // debug_loc(30);
+                    my_rover.next_ori = SOUTH;
+                    if(y > 0)
+                    {
+                        //debug_loc(33);
+                        my_rover.next_ori = NORTH;
+                    }
+                }
+                my_rover.rover_state = MY_ROVER_CHANGE_ORI;
+            }break;
+            case MY_ROVER_CHANGE_ORI:
+            {
+//                pwm.wanted_speed_right =0;
+//                pwm.wanted_speed_left = 0;
+//                interrupt_add_pwm(&pwm);
+                switch(my_rover.ori)
+                {
+                    case NORTH:
+                    {
+                        //debug_loc(40);
+                        if(my_rover.next_ori == SOUTH){
+                            change_direction(0,2, my_rover.next_ori);
+                          //  debug_loc(99);
+                        }
+                        else if(my_rover.next_ori == EAST){
+                            change_direction(0,1, my_rover.next_ori);
+                            //debug_loc(44);
+                        }
+                        else if(my_rover.next_ori == WEST)
+                            change_direction(1,1, my_rover.next_ori);
+                        else
+                            my_rover.bools.rotate = false;
+                        break;
+                    }
+                    case SOUTH:
+                    {
+                        if(my_rover.next_ori == NORTH)
+                            change_direction(0,2, my_rover.next_ori);
+                        else if(my_rover.next_ori == EAST)
+                            change_direction(0,1, my_rover.next_ori);
+                        else if(my_rover.next_ori == WEST)
+                            change_direction(1,1, my_rover.next_ori);
+                        else
+                        {
+                            my_rover.bools.rotate = false;
+                        }
+                        break;
+                    }
+                    case EAST:
+                    {
+                        //debug_loc(50);
+                        if(my_rover.next_ori == NORTH){
+                            change_direction(1,1, my_rover.next_ori);
+                            //debug_loc(55);
+                        }
+                        else if(my_rover.next_ori == SOUTH)
+                            change_direction(0,1, my_rover.next_ori);
+                        else if(my_rover.next_ori == WEST)
+                            change_direction(0,2, my_rover.next_ori);
+                        else
+                        {
+                            my_rover.bools.rotate = false;
+                        }
+                        break;
+                    }
+                    case WEST:
+                    {
+                        if(my_rover.next_ori == NORTH)
+                            change_direction(0,1, my_rover.next_ori);
+                        else if(my_rover.next_ori == EAST)
+                            change_direction(0,2, my_rover.next_ori);
+                        else if(my_rover.next_ori == SOUTH)
+                            change_direction(1,1, my_rover.next_ori);
+                        else
+                        {
+                            my_rover.bools.rotate = false;
+                        }
+                        break;
+                    }
+                
+                default:
+                    break;
+            }
+                my_rover.rover_state = ROVER_MOVE;
+            }break;
+            //
             case ROVER_MOVE:
             {   
                 my_rover.ticks.tick_right = 0;
@@ -471,84 +607,33 @@ void PROCESSING_Tasks() {
                 
                 interrupt_add_pwm(&pwm);
                 my_rover.rover_state = ROVER_BLOCK;
-                if(my_rover.bools.test_rotate){
-                    move_wheels(1,0);//right rotate
-                    my_rover.rover_state = ROVER_ROTATE_R;
+                if(my_rover.bools.rotate){
+                    my_rover.rover_state = ROVER_ROTATE;
                 }
                 
             }break;
             
-            //***********************************
-            //TODO: Move this all into a function + create the move block functions
-            //***********************************
-            case ROVER_BLOCK:
-            {
-                if(my_rover.ticks.tick_right >= TEN_CM(my_rover.debug_test.test_move_val))
-                {                 
-                    my_rover.ticks.tick_right = 0;
-                    my_rover.bools.stop_right = true;
-                }
-                else if(my_rover.ticks.tick_right == 130)
-                {
-                    my_rover.bools.slow_right = true;
-                }
-                
-                if(my_rover.ticks.tick_left >= TEN_CM(my_rover.debug_test.test_move_val))
-                {         
-                    my_rover.ticks.tick_left= 0;
-                    my_rover.bools.stop_left = true;
-                }
-                else if(my_rover.ticks.tick_left == 130)
-                {
-                    my_rover.bools.slow_left = true;
-                }
-                
-                
-                if(my_rover.bools.slow_right && my_rover.bools.slow_left)
-                {
-                    pwm.wanted_speed_left = 1.5e-1;
-                    pwm.wanted_speed_right = 1.5e-1;
-                    my_rover.bools.slow_left = false;
-                    my_rover.bools.slow_right = false;
-                }
-                
-
-                if(my_rover.bools.stop_left && my_rover.bools.stop_right){
-                    blocks++;
-                    my_rover.rover_state = ROVER_STOP;
-                    pwm.wanted_speed_right =0;
-                    pwm.wanted_speed_left = 0;   
-                    if(blocks < 1)
-                        my_rover.rover_state = ROVER_INIT;
-                }
-
-                interrupt_add_pwm(&pwm);
-            }break;
-            
-            //***********************************
-            //TODO: Move this all into a function + create the rotate functions
-            //TODO2: Make the network signals for ROVER_ROTATE_R and ROVER_ROTATE_L -- mainly for debugging
-            //***********************************
-            case ROVER_ROTATE_R:
+            case ROVER_ROTATE:
             {
                 //unsigned rotate = 60;
-                if(my_rover.ticks.tick_right >= ROTATE(my_rover.debug_test.test_rotate_val))
+                if(my_rover.ticks.tick_right >= my_rover.value.rotate_val)
                 {                 
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
                 }
-                if(my_rover.ticks.tick_left >= ROTATE(my_rover.debug_test.test_rotate_val))
+                if(my_rover.ticks.tick_left >= my_rover.value.rotate_val)
                 {         
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
                 }
+                
                 if(my_rover.bools.stop_left && my_rover.bools.stop_right){
-                    blocks++;
-                    my_rover.rover_state = ROVER_STOP;
-                    pwm.wanted_speed_right =0;
-                    pwm.wanted_speed_left = 0;   
-//                    if(blocks < 1)
-//                        my_rover.rover_state = ROVER_INIT;
+                    my_rover.rover_state = ROVER_BLOCK;
+                    my_rover.ticks.tick_left= 0;
+                    my_rover.ticks.tick_right= 0;
+                    my_rover.bools.stop_left = false;
+                    my_rover.bools.stop_right = false;
+                    move_wheels(0,0); 
                 }
                 else
                 {
@@ -559,36 +644,80 @@ void PROCESSING_Tasks() {
                 interrupt_add_pwm(&pwm);
             }break;
             
-            case ROVER_ROTATE_L:
+            //***********************************
+            //TODO: Move this all into a function + create the move block functions
+            //***********************************
+            case ROVER_BLOCK:
             {
-                //unsigned rotate = 60;
-                if(my_rover.ticks.tick_right >= ROTATE(1))
+                if(my_rover.ticks.tick_right >= TEN_CM(1))
                 {                 
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
                 }
-                if(my_rover.ticks.tick_left >= ROTATE(1))
+                else if(my_rover.ticks.tick_right == 650)
+                {
+                    my_rover.bools.slow_right = true;
+                }
+                
+                if(my_rover.ticks.tick_left >= TEN_CM(1))
                 {         
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
                 }
+                else if(my_rover.ticks.tick_left == 650)
+                {
+                    my_rover.bools.slow_left = true;
+                }
+                
+                
+//                if(my_rover.bools.slow_right && my_rover.bools.slow_left)
+//                {
+//                    pwm.wanted_speed_left = 1.5e-1;
+//                    pwm.wanted_speed_right = 1.5e-1;
+//                    my_rover.bools.slow_left = false;
+//                    my_rover.bools.slow_right = false;
+//                }
+                
+
                 if(my_rover.bools.stop_left && my_rover.bools.stop_right){
                     blocks++;
                     my_rover.rover_state = ROVER_STOP;
                     pwm.wanted_speed_right = 0;
-                    pwm.wanted_speed_left = 0;   
-                    if(blocks < 1)
-                        my_rover.rover_state = ROVER_INIT;
+                    pwm.wanted_speed_left = 0;
+                    
+                    my_rover.xy_points.x = path_to_go[map_size].xy/10;
+                    my_rover.xy_points.y = path_to_go[map_size].xy%10;
+                    
+                    map_size++;
+                    if(map_size < path_index){
+                        my_rover.rover_state = ROVER_FIND_DIR;
+                        my_rover.bools.stop_left = false;
+                        my_rover.bools.stop_right = false;
+                        send_message.type = NS_ROVER_DATA;
+                        send_message.data.rd.point.x = my_rover.xy_points.x;
+                        send_message.data.rd.point.y =  my_rover.xy_points.y;
+                        send_message.data.rd.ori = my_rover.ori;
+                        send_message.data.rd.target = target;
+
+                        network_send_add_message(&send_message); 
+                    }
                 }
-                
                 interrupt_add_pwm(&pwm);
             }break;
+            
+            //***********************************
+            //TODO: Move this all into a function + create the rotate functions
+            //TODO2: Make the network signals for ROVER_ROTATE_R and ROVER_ROTATE_L -- mainly for debugging
+            //***********************************
+          
             case ROVER_STOP:
             {
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 0);
                 pwm.wanted_speed_right = 0;
                 pwm.wanted_speed_left = 0;
                 interrupt_add_pwm(&pwm);
             }break;
+            
             default:
                 break;
         }
