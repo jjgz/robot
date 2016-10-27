@@ -58,14 +58,15 @@ typedef enum {
 typedef struct
 {
     //this value determines if there is something in the block (i.e item or object) 0-65
-    unsigned difficulty;
-    unsigned weight;
+    uint16_t difficulty;
+    uint16_t weight;
     
 }tiles;
 
 typedef struct
 {
-	short int xy;
+	uint8_t x;
+    uint8_t y;
 }edges;
 
 typedef enum{
@@ -132,7 +133,7 @@ typedef struct{
 
 void processing_add_recvmsg(NRMessage *message); 
 void interrupt_add_pwm(pwm_to_isr *pwm);
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4, double left_error, double right_error);
+void processing_add_pwm_reading(uint16_t left_pwm, uint16_t right_pwm, uint8_t tmr3, uint8_t tmr4, double left_error, double right_error);
 void processing_add_tmr_reading(uint32_t tmr3, uint32_t tmr4);
 void move_wheels(unsigned right, unsigned left);
 void enable_init();
@@ -141,10 +142,12 @@ void PROCESSING_Initialize();
 void PROCESSING_Tasks();
 void map_init();
 void find_path();
-void my_path();
+int my_path();
 void path_init();
 void init_world_diff();
 void change_direction(unsigned turn_left, uint16_t degree, orientation dir);
+void set_block(int x, int y);
+void set_target(int x, int y);
 #endif /* _PROCESSING_H */
 
 //DOM-IGNORE-BEGIN

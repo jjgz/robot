@@ -32,9 +32,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #define ROTATE(a) (650*a)
 #define X_SCALE(a) (a*10)
 
-#define MAX_GRID 20
-#define X 4
-#define Y 5
+#define MAX_GRID 500
+#define X 128
+#define Y 128
 #define MAX_WEIGHT 500
 
 extern Pid controller_right;
@@ -50,17 +50,17 @@ uint16_t processing_counter;
 
 //**********************************************************
 //**Everything below to the stars (*) is for the pathfinding
-unsigned target = 34;
+uint32_t target;
 unsigned short int edges_size;
 //unsigned short int next_edges_size;
 edges EDGES[MAX_GRID];
 edges NEXT_EDGES[MAX_GRID];
 edges path_to_go[MAX_GRID];
 tiles my_world[X][Y];
+uint16_t OFFSET;
 
 //path_index is the size of the path array that contains all the points to the target
 unsigned path_index;
-unsigned target;
 
 //this is essentially a boolean to check if there is indeed a path..if there isnt a path dont move
 uint8_t no_path;
@@ -74,6 +74,7 @@ unsigned map_size;
 
 void enable_init()
 {
+    OFFSET = 1000;
     pid_start(&controller_left);
     pid_start(&controller_right);
    // PLIB_INT_SourceEnable(INT_ID_0, INT_SOURCE_TIMER_5);
@@ -96,14 +97,15 @@ void enable_init()
     processing_counter = 0;
     map_size = 0;
     init_rover();
+    path_init();
     map_init();
 }
 void init_rover()
 {
     my_rover.rover_state = ROVER_INIT;
     //your location
-    my_rover.xy_points.x = 0;
-    my_rover.xy_points.y = 0;
+    my_rover.xy_points.x = 45;
+    my_rover.xy_points.y = 75;
     my_rover.ticks.tick_left = 0;
     my_rover.ticks.tick_right = 0;
     my_rover.bools.stop_left = false;
@@ -117,31 +119,61 @@ void init_rover()
 }
 void map_init()
 {
- 	my_world[0][0].weight = 10;
-	my_world[0][1].weight = 20;
-	my_world[0][2].weight = 20;
-	my_world[0][3].weight = 7;
-	my_world[0][4].weight = 5;
+    int i;
+ 	int j;
+    for (i = 0; i < X; i++)
+	{
+		//go through y
+		for (j = 0; j < Y; j++)
+		{
+			my_world[i][j].difficulty = 65535;
+			my_world[i][j].weight = MAX_WEIGHT;
+		}
+	}
 
-	my_world[1][0].weight = 20;
-	my_world[1][1].weight = MAX_WEIGHT;
-	my_world[1][2].weight = 50;
-	my_world[1][3].weight = 10;
-	my_world[1][4].weight = 7;
-
-	my_world[2][0].weight = 30;
-	my_world[2][1].weight = 40;
-	my_world[2][2].weight = MAX_WEIGHT;
-	my_world[2][3].weight = 30;
-	my_world[2][4].weight = 10;
-
-	my_world[3][0].weight = MAX_WEIGHT;
-	my_world[3][1].weight = 60;
-	my_world[3][2].weight = MAX_WEIGHT;
-	my_world[3][3].weight = 30;
-	my_world[3][4].weight = 0;
+	//Thi is set for 2x2 (ft) grid
+	for (i = 103; i >= 25; i--)
+	{
+		for (j = 25; j < 103; j++)
+		{
+			my_world[j][i].weight = 10;
+		}
+	}
+	set_block(55, 40);
+	set_block(75, 40);
+	set_block(60, 58);
+	set_block(40, 35);
+	set_target(target/OFFSET,target%OFFSET);
 }
-
+void set_block(int x, int y)
+{
+    int i,j;
+	for (i = x-5; i < x+6; i++)
+	{
+		for (j = y-5; j < y+6; j++)
+		{
+			if (i < x - 4 || j < y - 4 || i > x + 4 || j > y + 4)
+				my_world[i][j].weight = 70;
+			else if (i  < x - 3 || j < y - 3 || i > x + 3 || j > y + 3)
+				my_world[i][j].weight = 80;
+			else
+				my_world[i][j].weight = 99;
+		}
+	}
+}
+void set_target(int x, int y)
+{
+    int i, j;
+	for (i = x-1; i < x+2; i++)
+	{
+		for (j = y-1; j < y+2; j++)
+		{
+			my_world[i][j].weight = 5;
+			if (i == x && j ==y)
+				my_world[i][j].weight = 0;
+		}
+	}
+}
 void init_world_diff()
 {
     	//go through x
@@ -157,131 +189,196 @@ void init_world_diff()
 }
 void path_init()
 {
-    no_path = 1;
-    path_index = 0;
+	path_index = 0;
 	edges_size = 0;
-    //WHERE YOU ASSIGN TARGET
-	target = 34; //its at position <3,4>
+	target = 80080; //its at position <80,80>
     int i;
-	for (i = 0; i < MAX_GRID; i++)
-		path_to_go[i].xy = -1;
+	for (i = 0; i < MAX_GRID; i++){
+		path_to_go[i].x = -1;
+		path_to_go[i].y = -1;
+	}
 }
 
-void my_path()
+int my_path()
 {
-    unsigned find = 1;
-	unsigned total = MAX_GRID;
+    int find = 1;
+	int total = MAX_GRID;
 	//my_world[my_pos / 10][my_pos%10].
+	
 	int x = my_rover.xy_points.x;
 	int y = my_rover.xy_points.y;
+    int index = x*OFFSET+y;
 	//just in case
-	if (x == target / 10 && y == target % 10){
+	if (x == target / OFFSET && y == target % OFFSET){
 		find = 0;
-		path_to_go[0].xy = (x*10) + y;
-        no_path = 0;
+		path_to_go[0].x = x;
+		path_to_go[0].y = y;
 	}
+	unsigned short int east = 0;
+	unsigned short int north = 0;
+	unsigned short int west = 0;
+	unsigned short int south = 0;
 
-	int index = (x*10) + y;
-    //GET RID OF WHILE LOOP AND MAKE IT SUCH THAT YOU JSUT FIND the NEXT PATH
-	//AND JUST RETURN INDEX
-    while (find && total)
+	unsigned int min[11];
+	int front_side = 6;
+	//go east first
+	if (x + front_side < X)
 	{
-			int min;
-			if (x + 1 < 4)
-			{
-				index = (x+1)*10 + y;
-				min = my_world[x + 1][y].difficulty;
-			}
-			else
-			{
-				index = (x+1)*10 + y;
-				min = my_world[x - 1][y].difficulty;
-			}
-
-			if (my_world[x - 1][y].difficulty < min && x - 1 >= 0 && my_world[x - 1][y].difficulty < 100)
-			{
-				min = my_world[x - 1][y].difficulty;
-				index = (x-1)*10 + y;
-			}
-			if (my_world[x + 1][y].difficulty < min && x + 1 < 4 && my_world[x + 1][y].difficulty < 100)
-			{
-				
-				min = my_world[x + 1][y].difficulty;
-				index = (x+1)*10 + y;
-			}
-			if (my_world[x][y + 1].difficulty < min && y + 1 < 5 && my_world[x][y+1].difficulty < 100)
-			{
-				min = my_world[x][y+1].difficulty;
-				index = (X_SCALE(x)) + y + 1;
-			}
-			if (my_world[x][y - 1].difficulty < min && y - 1 >= 0 && my_world[x][y-1].difficulty < 100)
-			{
-				min = my_world[x - 1][y].difficulty;
-				index = (X_SCALE(x)) + y - 1;
-			}
-
-			if (index / 10 == target / 10 && index % 10 == target % 10){
-				find = 0;
-                no_path = 0;
-            }
-			
-			if (min < 100)
-				path_to_go[path_index++].xy = index;
-            debug_loc(index);
-			x = index / 10;
-			y = index % 10;
-			total--;
+		index = (x+1)*OFFSET + y;
+		int j;
+		for (j = 10; j >= 0; j--)
+		{
+			min[j] = my_world[x + front_side][(y - front_side + 1) + j].difficulty;
+			//printf("Min - <%d,%d> - difficulty: %d\n", x + front_side, (y - front_side + 1)+j, min[j]);
+		}
 	}
+	else //go west
+	{
+		index = (x-1)*OFFSET+ y;
+		int j;
+		for (j = 10; j >= 0; j--)
+			min[j] = my_world[x - front_side][(y - front_side + 1) + j].difficulty;
+	}
+	int j;
+	//********NORTH***************
+	for (j = 0; j < 11; j++)
+	{
+		//if this doesnt pass it means that we dont wanna go north since the difficulty isnt less than min
+		//printf("[%d,%d] difficulty: %d < min: %d\n", (x - front_side + 1) + j, y + front_side, my_world[(x - front_side + 1) + j][y + front_side].difficulty, min[j]);
+		if ((my_world[(x - front_side + 1) + j][y + front_side].difficulty <= min[j] && y + 1 < Y))
+		{
+			north++;
+		}
+	}
+	//printf("north: %d\n", north);
+	if (north == 11)
+	{
+		index = (x*OFFSET) + y + 1;
+		for (j = 10; j >= 0; j--)
+			min[j] = my_world[(x - front_side + 1) + j][y + front_side].difficulty;
+	}
+	//to check if we wanna go west
+	//******************WEST******************
+	for (j = 0; j < 11; j++)
+	{
+		//if this doesnt pass it means that we dont wanna go west since the difficulty isnt less than min
+		if ((my_world[x - front_side][(y - 5) + j].difficulty <= min[j] && x - 1 >= 0))
+		{
+			west++;
+		}
+	}
+
+	//printf("west: %d\n", west);
+	if (west  == 11)
+	{
+		index = (x-1)*OFFSET + y;
+		for (j = 10; j >= 0; j--)
+			min[j] = my_world[x - front_side][(y - front_side + 1) + j].difficulty;
+	}
+	/***********EAST***********/
+	for (j = 0; j < 11; j++)
+	{
+		//if this doesnt pass it means that we dont wanna go east since the difficulty isnt less than min
+		if ((my_world[x + front_side][(y - 5) + j].difficulty <= min[j] && x + 1 < X))
+		{
+			east++;
+		}
+	}
+	//printf("east: %d\n", east);
+	if (east == 11)
+	{
+		index = (x+1)*OFFSET + y;
+		for (j = 10; j >= 0; j--)
+			min[j] = my_world[x + front_side][(y - front_side+1) + j].difficulty;
+	}
+	//**********SOUTH**********
+	for (j = 0; j < 11; j++)
+	{
+		//if this doesnt pass it means that we dont wanna go north since the difficulty isnt less than min
+		if ((my_world[(x - 5) + j][y - 1].difficulty <= min[j] && y -1 >=0))
+		{
+			south++;
+		}
+	}
+
+	//printf("south: %d\n", south);
+	if (south == 11)
+	{
+		index = (x*OFFSET) + y - 1;
+		for (j = 10; j >= 0; j--)
+			min[j] = my_world[(x - front_side + 1) + j][y - 1].difficulty;
+	}
+
+	if (index / OFFSET == target / OFFSET + 3 ||
+		index % OFFSET == target % OFFSET + 3 ||
+		index / OFFSET == target / OFFSET - 3 ||
+		index % OFFSET == target % OFFSET - 3)
+		find = 0;
+			
+	//printf("min: %d\t<%d,%d>\n", min, index / OFFSET, index % OFFSET);
+	//printf("\nindex: <%d,%d>\n", index / OFFSET, index%OFFSET);
+	return index;
 }
 void find_path()
 {
-    init_world_diff();
-	my_world[target / 10][target % 10].difficulty = 0;
-	my_world[target / 10][target % 10].weight = 0;
-	EDGES[0].xy = target;//<3,4>
+	my_world[target / OFFSET][target % OFFSET].difficulty = 0;
+	my_world[target / OFFSET][target % OFFSET].weight = 0;
+	EDGES[0].x = target / OFFSET;//<80,80>
+	EDGES[0].y = target % OFFSET;
 	edges_size = 1;
+	unsigned short int world_diff_n;
+	unsigned short int world_diff_s;
+	unsigned short int world_diff_e;
+	unsigned short int world_diff_w;
+    
 	while (edges_size)
 	{
 		int j = 0;
 		int i;
 		for (i = 0; i < edges_size; i++)
 		{
-			int x = EDGES[i].xy / 10; //the current tile
-			int y = EDGES[i].xy % 10; //the current tile
+			int x = EDGES[i].x; //the current tile
+			int y = EDGES[i].y; //the current tile
+			world_diff_n = my_world[x][y].difficulty + my_world[x][y+1].weight;
+			world_diff_s = my_world[x][y].difficulty + my_world[x][y-1].weight;
+			world_diff_e = my_world[x][y].difficulty + my_world[x+1][y].weight;
+			world_diff_w = my_world[x][y].difficulty + my_world[x-1][y].weight;
 			
-			unsigned short int world_diff_n = my_world[x][y].difficulty + my_world[x][y+1].weight;
-			unsigned short int world_diff_s = my_world[x][y].difficulty + my_world[x][y-1].weight;
-			unsigned short int world_diff_e = my_world[x][y].difficulty + my_world[x+1][y].weight;
-			unsigned short int world_diff_w = my_world[x][y].difficulty + my_world[x-1][y].weight;
-
-			if (world_diff_n < my_world[x][y + 1].difficulty && y+1 < 5)
+            if (world_diff_n < my_world[x][y + 1].difficulty && y+1 < X)
 			{
-				NEXT_EDGES[j].xy = EDGES[i].xy + 1; //for north
+				NEXT_EDGES[j].y = EDGES[i].y + 1; //for north
+				NEXT_EDGES[j].x = EDGES[i].x;
 				my_world[x][y + 1].difficulty = world_diff_n;
 				j++;
 			}
 			if (world_diff_s < my_world[x][y - 1].difficulty && y - 1 >= 0)
 			{
-				NEXT_EDGES[j].xy = EDGES[i].xy - 1; //for south
+				NEXT_EDGES[j].y = EDGES[i].y - 1; //for south
+				NEXT_EDGES[j].x = EDGES[i].x;
 				my_world[x][y - 1].difficulty = world_diff_s;
 				j++;
 			}
-			if (world_diff_e < my_world[x+1][y].difficulty && x+1 < 4)
+			if (world_diff_e < my_world[x+1][y].difficulty && x+1 < Y)
 			{
-				NEXT_EDGES[j].xy = EDGES[i].xy + 10; //for east
+				NEXT_EDGES[j].x = EDGES[i].x + 1; //for east
+				NEXT_EDGES[j].y = EDGES[i].y;
 				my_world[x+1][y].difficulty = world_diff_e;
 				j++;
 			}
 			if (world_diff_w < my_world[x-1][y].difficulty && x-1 >= 0)
 			{
-				NEXT_EDGES[j].xy = EDGES[i].xy - 10; //for west
+				NEXT_EDGES[j].x = EDGES[i].x - 1; //for west
+				NEXT_EDGES[j].y = EDGES[i].y;
 				my_world[x-1][y].difficulty = world_diff_w;
 				j++;
 			}
 		}
 		int k;
 		for (k = 0; k < j; k++)
-			EDGES[k].xy = NEXT_EDGES[k].xy;
+        {
+			EDGES[k].x = NEXT_EDGES[k].x;
+			EDGES[k].y = NEXT_EDGES[k].y;
+        }
 		edges_size = j;
 		//print_world();
 		//print_edges();
@@ -307,7 +404,7 @@ void processing_add_recvmsg(NRMessage *message) {
 }
 //tmr3 = right
 //tmr4 = left
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm,uint32_t tmr3, uint32_t tmr4, double left_error, double right_error){
+void processing_add_pwm_reading(uint16_t left_pwm, uint16_t right_pwm,uint8_t tmr3, uint8_t tmr4, double left_error, double right_error){
     
     if(my_rover.bools.got_name)
     {
@@ -463,6 +560,7 @@ void PROCESSING_Tasks() {
             default:
                 break;
         }
+        //START OF SWITCH
         switch(my_rover.rover_state)
         {
             case ROVER_INIT:
@@ -489,13 +587,8 @@ void PROCESSING_Tasks() {
             }break;
             case ROVER_FIND_DIR:
             {
-                
-               // SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
-//                pwm.wanted_speed_right =0;
-//                pwm.wanted_speed_left = 0;
-//                interrupt_add_pwm(&pwm);
-                unsigned x = path_to_go[map_size].xy/10 - my_rover.xy_points.x;
-                unsigned y = path_to_go[map_size].xy%10 - my_rover.xy_points.y;
+                unsigned x = path_to_go[map_size].x - my_rover.xy_points.x;
+                unsigned y = path_to_go[map_size].y - my_rover.xy_points.y;
                  
                 //****************************************************
                 if(x)
@@ -649,7 +742,7 @@ void PROCESSING_Tasks() {
             //***********************************
             case ROVER_BLOCK:
             {
-                if(my_rover.ticks.tick_right >= TEN_CM(1))
+                if(my_rover.ticks.tick_right >= TEN_CM(my_rover.debug_test.test_move_val))
                 {                 
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
@@ -659,7 +752,8 @@ void PROCESSING_Tasks() {
                     my_rover.bools.slow_right = true;
                 }
                 
-                if(my_rover.ticks.tick_left >= TEN_CM(1))
+                //original was TEN_CM(1)
+                if(my_rover.ticks.tick_left >= TEN_CM(my_rover.debug_test.test_move_val))
                 {         
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
@@ -685,11 +779,14 @@ void PROCESSING_Tasks() {
                     pwm.wanted_speed_right = 0;
                     pwm.wanted_speed_left = 0;
                     
-                    my_rover.xy_points.x = path_to_go[map_size].xy/10;
-                    my_rover.xy_points.y = path_to_go[map_size].xy%10;
+                    my_rover.xy_points.x = path_to_go[map_size].x;
+                    my_rover.xy_points.y = path_to_go[map_size].y;
                     
-                    map_size++;
-                    if(map_size < path_index){
+                    //chaange back to just mapsize++
+                    map_size = 1;
+                    //map_size++;
+                    //replace path_index to 1
+                    if(map_size < 1){
                         my_rover.rover_state = ROVER_FIND_DIR;
                         my_rover.bools.stop_left = false;
                         my_rover.bools.stop_right = false;
