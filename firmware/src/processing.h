@@ -75,9 +75,9 @@ typedef enum{
     ROVER_BLOCK,
     ROVER_ROTATE,
     ROVER_STOP,
-            ROVER_FIND_DIR,
-            ROVER_FIND_PATH,
-            MY_ROVER_CHANGE_ORI,
+    ROVER_FIND_DIR,
+    ROVER_FIND_PATH,
+    MY_ROVER_CHANGE_ORI,
 }RStates;
 
 typedef union {
@@ -116,6 +116,7 @@ typedef struct{
     boolean_vals bools;
     debug_vals debug_test;
     MSGPoint xy_points;
+    MSGPoint next_points;
     rotate_val value;
     orientation ori;
     orientation next_ori;
@@ -142,7 +143,7 @@ void PROCESSING_Initialize();
 void PROCESSING_Tasks();
 void map_init();
 void find_path();
-int my_path();
+int my_path(uint8_t t_index);
 void path_init();
 void init_world_diff();
 void change_direction(unsigned turn_left, uint16_t degree, orientation dir);

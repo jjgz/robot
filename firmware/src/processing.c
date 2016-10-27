@@ -35,7 +35,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #define MAX_GRID 500
 #define X 128
 #define Y 128
-#define MAX_WEIGHT 500
+#define MAX_WEIGHT 99
 
 extern Pid controller_right;
 extern Pid controller_left;
@@ -58,6 +58,7 @@ edges NEXT_EDGES[MAX_GRID];
 edges path_to_go[MAX_GRID];
 tiles my_world[X][Y];
 uint16_t OFFSET;
+bool find;
 
 //path_index is the size of the path array that contains all the points to the target
 unsigned path_index;
@@ -69,12 +70,18 @@ uint8_t no_path;
 //unsigned x = path_to_go[map_size].xy/10 - my_rover.position.x;
 //unsigned y = path_to_go[map_size].xy%10 - my_rover.position.y;
 unsigned map_size;
+unsigned int target_list[20];
+uint8_t target_size;
+uint8_t target_index;
 //***********************************************************
 //**********************************************************
 
 void enable_init()
 {
+    find = false;
     OFFSET = 1000;
+    target_size = 0;
+    target_index = 0;
     pid_start(&controller_left);
     pid_start(&controller_right);
    // PLIB_INT_SourceEnable(INT_ID_0, INT_SOURCE_TIMER_5);
@@ -104,8 +111,8 @@ void init_rover()
 {
     my_rover.rover_state = ROVER_INIT;
     //your location
-    my_rover.xy_points.x = 45;
-    my_rover.xy_points.y = 75;
+    my_rover.xy_points.x = 35;
+    my_rover.xy_points.y = 35;
     my_rover.ticks.tick_left = 0;
     my_rover.ticks.tick_right = 0;
     my_rover.bools.stop_left = false;
@@ -116,6 +123,14 @@ void init_rover()
     my_rover.bools.test_move = false;
     my_rover.bools.test_rotate = false;
     my_rover.bools.rotate = true;
+}
+
+void path_init()
+{
+	path_index = 0;
+	edges_size = 0;
+	target_list[0] = 80080; //its at position <80,80>
+    target_size += 1;
 }
 void map_init()
 {
@@ -142,17 +157,19 @@ void map_init()
 	set_block(55, 40);
 	set_block(75, 40);
 	set_block(60, 58);
-	set_block(40, 35);
-	set_target(target/OFFSET,target%OFFSET);
+	//set_block(40, 35);
+	set_target(target_list[target_index]/OFFSET,target_list[target_index]%OFFSET);
 }
 void set_block(int x, int y)
 {
     int i,j;
-	for (i = x-5; i < x+6; i++)
+	for (i = x-6; i < x+7; i++)
 	{
-		for (j = y-5; j < y+6; j++)
+		for (j = y-6; j < y+7; j++)
 		{
-			if (i < x - 4 || j < y - 4 || i > x + 4 || j > y + 4)
+            if((i < x -5 || j < y - 5 || i > x + 5 || j > y + 5))
+                my_world[i][j].weight = 60;
+			else if (i < x - 4 || j < y - 4 || i > x + 4 || j > y + 4)
 				my_world[i][j].weight = 70;
 			else if (i  < x - 3 || j < y - 3 || i > x + 3 || j > y + 3)
 				my_world[i][j].weight = 80;
@@ -184,35 +201,20 @@ void init_world_diff()
 		for (j = 0; j < 5; j++)
 		{
 			my_world[i][j].difficulty = 1000;
+			my_world[i][j].weight = MAX_WEIGHT;
 		}
 	}
 }
-void path_init()
-{
-	path_index = 0;
-	edges_size = 0;
-	target = 80080; //its at position <80,80>
-    int i;
-	for (i = 0; i < MAX_GRID; i++){
-		path_to_go[i].x = -1;
-		path_to_go[i].y = -1;
-	}
-}
 
-int my_path()
+int my_path(uint8_t t_index)
 {
-    int find = 1;
-	int total = MAX_GRID;
-	//my_world[my_pos / 10][my_pos%10].
-	
+    find = false;
 	int x = my_rover.xy_points.x;
 	int y = my_rover.xy_points.y;
     int index = x*OFFSET+y;
 	//just in case
-	if (x == target / OFFSET && y == target % OFFSET){
-		find = 0;
-		path_to_go[0].x = x;
-		path_to_go[0].y = y;
+	if (x == target_list[t_index] / OFFSET && y == target_list[t_index] % OFFSET){
+		find = true;
 	}
 	unsigned short int east = 0;
 	unsigned short int north = 0;
@@ -228,7 +230,7 @@ int my_path()
 		int j;
 		for (j = 10; j >= 0; j--)
 		{
-			min[j] = my_world[x + front_side][(y - front_side + 1) + j].difficulty;
+            min[j] = my_world[x + front_side][(y - front_side + 1) + j].difficulty;
 			//printf("Min - <%d,%d> - difficulty: %d\n", x + front_side, (y - front_side + 1)+j, min[j]);
 		}
 	}
@@ -309,22 +311,23 @@ int my_path()
 			min[j] = my_world[(x - front_side + 1) + j][y - 1].difficulty;
 	}
 
-	if (index / OFFSET == target / OFFSET + 3 ||
-		index % OFFSET == target % OFFSET + 3 ||
-		index / OFFSET == target / OFFSET - 3 ||
-		index % OFFSET == target % OFFSET - 3)
-		find = 0;
-			
+    unsigned short int offset_bias = 10;
+    if (index / OFFSET < target_list[target_index] / OFFSET + offset_bias &&
+        index / OFFSET > target_list[target_index] / OFFSET - offset_bias ||
+        index % OFFSET < target_list[target_index] % OFFSET + offset_bias &&
+        index % OFFSET > target_list[target_index] % OFFSET - offset_bias)
+        find = true;
+
 	//printf("min: %d\t<%d,%d>\n", min, index / OFFSET, index % OFFSET);
 	//printf("\nindex: <%d,%d>\n", index / OFFSET, index%OFFSET);
 	return index;
 }
 void find_path()
 {
-	my_world[target / OFFSET][target % OFFSET].difficulty = 0;
-	my_world[target / OFFSET][target % OFFSET].weight = 0;
-	EDGES[0].x = target / OFFSET;//<80,80>
-	EDGES[0].y = target % OFFSET;
+	my_world[target_list[target_index] / OFFSET][target_list[target_index] % OFFSET].difficulty = 0;
+	my_world[target_list[target_index] / OFFSET][target_list[target_index] % OFFSET].weight = 0;
+	EDGES[0].x = target_list[target_index] / OFFSET;//<80,80>
+	EDGES[0].y = target_list[target_index] % OFFSET;
 	edges_size = 1;
 	unsigned short int world_diff_n;
 	unsigned short int world_diff_s;
@@ -565,7 +568,7 @@ void PROCESSING_Tasks() {
         {
             case ROVER_INIT:
             {
-                my_rover.ori = SOUTH;
+                my_rover.ori = NORTH;
                 my_rover.ticks.tick_right = 0;
                 my_rover.ticks.tick_left = 0;
                 //if you wanna test rotation via debug assign next_ori and current_ori and go to state ROVER_MOVE
@@ -581,15 +584,15 @@ void PROCESSING_Tasks() {
                 interrupt_add_pwm(&pwm);
                 path_index = 0;
                 find_path();
-                my_path();
-                if(!no_path)
-                    my_rover.rover_state = ROVER_FIND_DIR;
+                my_rover.rover_state = ROVER_FIND_DIR;
             }break;
             case ROVER_FIND_DIR:
             {
-                unsigned x = path_to_go[map_size].x - my_rover.xy_points.x;
-                unsigned y = path_to_go[map_size].y - my_rover.xy_points.y;
-                 
+                unsigned int point = my_path(target_index);
+                my_rover.next_points.x = point/OFFSET;
+                my_rover.next_points.y = point%OFFSET;
+                unsigned x = point/OFFSET - my_rover.xy_points.x;
+                unsigned y = point%OFFSET - my_rover.xy_points.y;
                 //****************************************************
                 if(x)
                 {
@@ -719,7 +722,6 @@ void PROCESSING_Tasks() {
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
                 }
-                
                 if(my_rover.bools.stop_left && my_rover.bools.stop_right){
                     my_rover.rover_state = ROVER_BLOCK;
                     my_rover.ticks.tick_left= 0;
@@ -742,7 +744,7 @@ void PROCESSING_Tasks() {
             //***********************************
             case ROVER_BLOCK:
             {
-                if(my_rover.ticks.tick_right >= TEN_CM(my_rover.debug_test.test_move_val))
+                if(my_rover.ticks.tick_right >= 30)
                 {                 
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
@@ -753,7 +755,7 @@ void PROCESSING_Tasks() {
                 }
                 
                 //original was TEN_CM(1)
-                if(my_rover.ticks.tick_left >= TEN_CM(my_rover.debug_test.test_move_val))
+                if(my_rover.ticks.tick_left >= 30)
                 {         
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
@@ -773,31 +775,33 @@ void PROCESSING_Tasks() {
 //                }
                 
 
-                if(my_rover.bools.stop_left && my_rover.bools.stop_right){
-                    blocks++;
+                if(my_rover.bools.stop_left && my_rover.bools.stop_right)
+                {
                     my_rover.rover_state = ROVER_STOP;
                     pwm.wanted_speed_right = 0;
                     pwm.wanted_speed_left = 0;
+                    my_rover.xy_points.x = my_rover.next_points.x;
+                    my_rover.xy_points.y = my_rover.next_points.y;
                     
-                    my_rover.xy_points.x = path_to_go[map_size].x;
-                    my_rover.xy_points.y = path_to_go[map_size].y;
-                    
-                    //chaange back to just mapsize++
-                    map_size = 1;
-                    //map_size++;
                     //replace path_index to 1
-                    if(map_size < 1){
+                    //This needs to change to g
+                    
+                    if(!find){
                         my_rover.rover_state = ROVER_FIND_DIR;
                         my_rover.bools.stop_left = false;
                         my_rover.bools.stop_right = false;
+                        unsigned int point = my_path(target_index);
                         send_message.type = NS_ROVER_DATA;
                         send_message.data.rd.point.x = my_rover.xy_points.x;
                         send_message.data.rd.point.y =  my_rover.xy_points.y;
                         send_message.data.rd.ori = my_rover.ori;
-                        send_message.data.rd.target = target;
-
-                        network_send_add_message(&send_message); 
+                        send_message.data.rd.target = target_list[target_index];
+                        network_send_add_message(&send_message);
                     }
+//                    else if(find)
+//                    {
+//                        //go to the distance calculator state...for grabbing
+//                    }
                 }
                 interrupt_add_pwm(&pwm);
             }break;
