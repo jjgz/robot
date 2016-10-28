@@ -536,6 +536,14 @@ void PROCESSING_Tasks() {
                          my_rover.bools.test_move = true;
                          my_rover.debug_test.test_move_val = recv_message.data.nr_message.data.move_val;
                      }break;
+                     case NR_TEST_ROW:
+                     {
+                         int i;
+                         send_message.type = NS_TEST_ROW;
+                         for(i = 0; i < 3; i++)
+                            send_message.data. w_array[i].weight = recv_message.data.nr_message.data.w_array[i].weight;
+                         network_send_add_message(&send_message);
+                     }break;
                      //TODO: Add a NR_REQ_TEST_RESET case such that you can reset the values and everything 
                      //you could also send back a send message to get a confirmation that the command was sent..or do it down in the case statement
                      //and just push it in the queue. If you choose to do this part then add it into send.c
@@ -803,7 +811,7 @@ void PROCESSING_Tasks() {
 //                        //go to the distance calculator state...for grabbing
 //                    }
                 }
-                interrupt_add_pwm(&pwm);
+                //interrupt_add_pwm(&pwm);
             }break;
             
             //***********************************
