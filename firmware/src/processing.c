@@ -59,6 +59,8 @@ void PROCESSING_Initialize() {
     processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(PRMessage));
 }
 
+uint8_t grid[128 * 128];
+
 void PROCESSING_Tasks() {
     PRMessage recv_message;
     NSMessage send_message;
@@ -72,6 +74,10 @@ void PROCESSING_Tasks() {
     netstats->numJSONResponsesRecved = 0;
     netstats->numJSONRequestsSent = 0;
     netstats->numJSONResponsesSent = 0;
+    
+    unsigned i;
+    for (i = 0; i < 128*128; i++)
+        grid[i] = ((i / 128 % 2) + (i % 128 % 2) + i) % 100;
     
     
     network_send_add_message(&netstats_message);
@@ -99,6 +105,13 @@ void PROCESSING_Tasks() {
                     case NR_REQ_NAME:
                     {
                         send_message.type = NS_SEND_NAME_GEO;
+                        network_send_add_message(&send_message);
+                    } break;
+                    case NR_GD_REQ_HALF_ROW:
+                    {
+                        for (i = 0; i < 64; i++)
+                            send_message.data.w_array[i] = grid[recv_message.data.nr_message.data.half_row * 64 + i];
+                        send_message.type = NS_GD_HALF_ROW;
                         network_send_add_message(&send_message);
                     } break;
                     default:
