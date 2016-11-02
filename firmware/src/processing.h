@@ -79,6 +79,9 @@ typedef enum{
     ROVER_FIND_PATH,
     MY_ROVER_CHANGE_ORI,
             ROVER_GO_HOME,
+            ROVER_WAIT_GRAB,
+            ROVER_WAIT_DROPPED,
+            ROVER_RAMP,
 }RStates;
 
 typedef union {
@@ -109,6 +112,8 @@ typedef struct{
     bool test_move;
     bool test_rotate;
     bool rotate;
+    bool grabbed;
+    bool dropped;
 }boolean_vals;
 
 typedef struct{
