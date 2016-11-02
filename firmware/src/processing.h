@@ -149,7 +149,9 @@ void path_init();
 void init_world_diff();
 void change_direction(unsigned turn_left, uint16_t degree, orientation dir);
 void set_block(int x, int y);
-void set_target(int x, int y);
+void set_target();
+void path_find_index_min(int *index, unsigned int *min, unsigned short int x, unsigned short int y);
+void world_diff(unsigned short int *world_diff, int diff_plus_weight, unsigned short int weight);
 #endif /* _PROCESSING_H */
 
 //DOM-IGNORE-BEGIN
