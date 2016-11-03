@@ -98,6 +98,11 @@ void PROCESSING_Tasks() {
                         // We responded to a request, so we increase the responses sent.
                         netstats->numJSONResponsesSent++;
                     } break;
+                     case NR_GD_REQ_PING:
+                     {
+                         send_message.type = NS_GD_PING;
+                        network_send_add_message(&send_message);
+                     } break;
                     case NR_INVALID_ERROR:
                     {
                         netstats->numCommErrors++;
@@ -116,7 +121,7 @@ void PROCESSING_Tasks() {
                     } break;
                     default:
                         break;
-                }       
+                }
             } break;
             
             case PR_ADC:
