@@ -41,7 +41,7 @@ extern Pid controller_right;
 extern Pid controller_left;
 QueueHandle_t processing_queue;
 extern QueueHandle_t interrupt_queue;
-extern rover my_rover;
+rover my_rover;
 extern double wanted_speed_left;
 extern double wanted_speed_right;
 unsigned output_right_avg;
@@ -417,7 +417,7 @@ void processing_add_recvmsg(NRMessage *message) {
 //tmr4 = left
 void processing_add_pwm_reading(uint16_t left_pwm, uint16_t right_pwm,uint8_t tmr3, uint8_t tmr4, double left_error, double right_error){
     
-    if(my_rover.bools.got_name)
+    if(my_rover.bools.test_move)
     {
        processing_counter++;
        output_left_avg += left_pwm;
@@ -549,10 +549,6 @@ void PROCESSING_Tasks() {
                      {
                          int i;
                          send_message.type = NS_TEST_ROW;
-                         for(i = 0; i < 32; i++){
-                            send_message.data. w_array[i].weight = recv_message.data.nr_message.data.w_array[i].weight;
-                            
-                         }
                          network_send_add_message(&send_message);
                      }break;
                      case NR_GRABBED:
@@ -574,7 +570,7 @@ void PROCESSING_Tasks() {
             } break;
             case PR_PWM:
             {
-                if(my_rover.bools.got_name)
+                if(my_rover.bools.test_move)
                 {
                     send_message.type = NS_PWM;
 
@@ -599,7 +595,7 @@ void PROCESSING_Tasks() {
                 my_rover.ticks.tick_right = 0;
                 my_rover.ticks.tick_left = 0;
                 //if you wanna test rotation via debug assign next_ori and current_ori and go to state ROVER_MOVE
-                if(my_rover.bools.got_name && (my_rover.bools.test_rotate || my_rover.bools.test_move))
+                if(my_rover.bools.test_rotate || my_rover.bools.test_move)
                 {
                     blocks = 0;
                     my_rover.rover_state = ROVER_FIND_PATH;
