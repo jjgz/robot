@@ -82,6 +82,7 @@ typedef enum{
             ROVER_WAIT_GRAB,
             ROVER_WAIT_DROPPED,
             ROVER_RAMP,
+            ROVER_RAMP_ROTATE,
 }RStates;
 
 typedef union {
@@ -91,7 +92,9 @@ typedef union {
 
 typedef struct{
     uint32_t tick_left;
+    uint32_t tick_between_states_left;
     uint32_t tick_right;
+    uint32_t tick_between_states_right;
 }pwm_ticks;
 
 typedef struct{

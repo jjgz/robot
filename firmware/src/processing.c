@@ -29,7 +29,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "pid/pid.h"
 
 #define TEN_CM(a) (750*a)
-#define ROTATE(a) (640*a)
+#define ROTATE(a) (650*a)
 #define X_SCALE(a) (a*10)
 
 #define MAX_GRID 500
@@ -122,6 +122,8 @@ void init_rover()
     my_rover.home.y = 35;
     my_rover.ticks.tick_left = 0;
     my_rover.ticks.tick_right = 0;
+    my_rover.ticks.tick_between_states_left = 0;
+    my_rover.ticks.tick_between_states_right = 0;
     my_rover.bools.stop_left = false;
     my_rover.bools.stop_right = false;
     my_rover.bools.slow_left = false;
@@ -140,7 +142,7 @@ void path_init()
 	edges_size = 0;
 	target_list[0] = 80080; //its at position <80,80>
     target_size += 1;
-    target_list[1] = 30085; //its at position <80,80>
+    target_list[1] = 30085; //its at position <30,85>
     target_size += 1;
 }
 void map_init()
@@ -299,15 +301,15 @@ int my_path(uint8_t t_index)
         go_home = true;
         find = true;
     }
-        s_message.type = NS_ROVER_DATA;
-        s_message.data.rd.point.x = 100;
-        s_message.data.rd.point.y =  target_list[target_index] % OFFSET;
-        s_message.data.rd.ori = my_rover.next_ori;
-        s_message.data.rd.target = index;
-        network_send_add_message(&s_message);
 
     if (index / OFFSET ==  my_rover.home.x && index % OFFSET == my_rover.home.y && go_home) 
         home = true;
+    s_message.type = NS_ROVER_DATA;
+                    s_message.data.rd.point.x = index/OFFSET;
+                    s_message.data.rd.point.y =  index%OFFSET;
+                    s_message.data.rd.ori = 0;
+                    s_message.data.rd.target = min;
+                    network_send_add_message(&s_message);
 	return index;
 }
 void find_path(bool home)
@@ -395,8 +397,8 @@ void find_path(bool home)
 void change_direction(unsigned turn_left, uint16_t degree, orientation dir)
 {
     pwm_to_isr pwm_cd;
-    pwm_cd.wanted_speed_right = 1.4e-1;
-    pwm_cd.wanted_speed_left = 1.4e-1;
+    pwm_cd.wanted_speed_right = 1.1e-1;
+    pwm_cd.wanted_speed_left = 1.1e-1;
     interrupt_add_pwm(&pwm_cd);
     move_wheels(1,0);
     if(turn_left)
@@ -419,38 +421,37 @@ void processing_add_pwm_reading(uint16_t left_pwm, uint16_t right_pwm,uint8_t tm
     
     if(my_rover.bools.test_move)
     {
-       processing_counter++;
-       output_left_avg += left_pwm;
-       output_right_avg += right_pwm;
-
-       my_rover.ticks.tick_left += tmr4;
-       my_rover.ticks.tick_right += tmr3;
-       if(processing_counter == 100)
-       {
-           processing_counter = 0;
-           output_left_avg = output_left_avg/100;
-           output_right_avg = output_right_avg/100;
-           PRMessage pr_adc_message;
-           pr_adc_message.type = PR_PWM;
-           pr_adc_message.data.timer.speed_left = output_left_avg;
-           pr_adc_message.data.timer.speed_right = output_right_avg;
-           pr_adc_message.data.timer.tmr3 = tmr3;
-           pr_adc_message.data.timer.tmr4 =  tmr4;
-           pr_adc_message.data.timer.left_error = left_error;
-           pr_adc_message.data.timer.right_error = right_error;
-           output_left_avg = 0;
-           output_right_avg = 0;
-           BaseType_t higher_priority_task_woken = pdFALSE;
-           // Attempt add the buffer from the isr to the queue.
-           if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
-               // If a higher priority task was waiting for something on the queue, switch to it.
-               portEND_SWITCHING_ISR(higher_priority_task_woken);
-           // We didn't receive a buffer.
-           } else {
-               // Indicate on LD4 that we lost a packet.
-               // NOTE: LD4 conflicts with SDA2 (I2C).
-               SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-           }    
+        my_rover.ticks.tick_left += tmr4;
+        my_rover.ticks.tick_right += tmr3;
+        output_left_avg += left_pwm;
+        output_right_avg += right_pwm;
+        processing_counter++;
+        if(processing_counter == 100)
+        {
+            processing_counter = 0;
+            output_left_avg = output_left_avg/100;
+            output_right_avg = output_right_avg/100;
+            PRMessage pr_adc_message;
+            pr_adc_message.type = PR_PWM;
+            pr_adc_message.data.timer.speed_left = output_left_avg;
+            pr_adc_message.data.timer.speed_right = output_right_avg;
+            pr_adc_message.data.timer.tmr3 = tmr3;
+            pr_adc_message.data.timer.tmr4 =  tmr4;
+            pr_adc_message.data.timer.left_error = my_rover.ticks.tick_between_states_left;
+            pr_adc_message.data.timer.right_error = my_rover.ticks.tick_between_states_right;
+            output_left_avg = 0;
+            output_right_avg = 0;
+            BaseType_t higher_priority_task_woken = pdFALSE;
+            // Attempt add the buffer from the isr to the queue.
+            if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
+                // If a higher priority task was waiting for something on the queue, switch to it.
+                portEND_SWITCHING_ISR(higher_priority_task_woken);
+            // We didn't receive a buffer.
+            } else {
+                // Indicate on LD4 that we lost a packet.
+                // NOTE: LD4 conflicts with SDA2 (I2C).
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+            }    
        }
 
     }
@@ -485,7 +486,9 @@ void PROCESSING_Tasks() {
     netstats->numJSONResponsesSent = 0;
    move_wheels(0,0);
    int wait_grabbed = 0;
-    
+   int wait_ramp_rotate = 0;
+   int wait_to_send_req_row = 0;
+   uint8_t rows = 0;
     network_send_add_message(&netstats_message);
 
     while (1) {
@@ -558,7 +561,20 @@ void PROCESSING_Tasks() {
                      case NR_DROPPED:
                      {
                          my_rover.bools.dropped = recv_message.data.nr_message.data.answer;
-                     }
+                     }break;
+                     case NR_HALF_ROW:
+                     {
+                         int i;
+                        for(i = 0; i < 64; i++)
+                        {
+                            my_world[((rows%2)*64)+i][rows >> 1].weight = recv_message.data.nr_message.data.w_array[i];
+                        }
+                        send_message.type = NS_JC_REQ_HALF_ROW;
+                        send_message.data.row_req = ++rows;
+                        network_send_add_message(&send_message);
+                        wait_to_send_req_row = 0;
+                            
+                     }break;
                      //TODO: Add a NR_REQ_TEST_RESET case such that you can reset the values and everything 
                      //you could also send back a send message to get a confirmation that the command was sent..or do it down in the case statement
                      //and just push it in the queue. If you choose to do this part then add it into send.c
@@ -573,7 +589,6 @@ void PROCESSING_Tasks() {
                 if(my_rover.bools.test_move)
                 {
                     send_message.type = NS_PWM;
-
                     send_message.data.tmr.speed_left= recv_message.data.timer.speed_left;
                     send_message.data.tmr.speed_right = recv_message.data.timer.speed_right;
                     send_message.data.tmr.tmr3= my_rover.ticks.tick_right;
@@ -594,11 +609,22 @@ void PROCESSING_Tasks() {
                 my_rover.ori = NORTH;
                 my_rover.ticks.tick_right = 0;
                 my_rover.ticks.tick_left = 0;
+                wait_to_send_req_row++;
+                if(wait_to_send_req_row == 100)
+                {
+                    send_message.type = NS_JC_REQ_HALF_ROW;
+                    send_message.data.row_req = rows;
+                    network_send_add_message(&send_message);
+                    
+                    wait_to_send_req_row = 0;
+                }
                 //if you wanna test rotation via debug assign next_ori and current_ori and go to state ROVER_MOVE
-                if(my_rover.bools.test_rotate || my_rover.bools.test_move)
+                //if((my_rover.bools.test_rotate || my_rover.bools.test_move))
+                if(rows == 127 && (my_rover.bools.test_rotate || my_rover.bools.test_move))
                 {
                     blocks = 0;
                     my_rover.rover_state = ROVER_FIND_PATH;
+                    set_target();
 //**********************************************************************************
 //************************BELOW IS FOR DEBUG****************************************
 //                    if(my_rover.bools.test_move)                          //******
@@ -735,26 +761,40 @@ void PROCESSING_Tasks() {
                 
                 my_rover.rover_state = ROVER_BLOCK;
                 if(my_rover.bools.rotate){
-                    my_rover.rover_state = ROVER_ROTATE;
+                    my_rover.rover_state = ROVER_RAMP_ROTATE;
                     pwm.wanted_speed_right = 1.35e-1;
                     pwm.wanted_speed_left = 1.35e-1;
                 }
                 interrupt_add_pwm(&pwm);
             }break;
-            
+            case ROVER_RAMP_ROTATE:
+            {
+                pwm.wanted_speed_right = (1.25e-1) - (double)wait_ramp_rotate/100.0;
+                pwm.wanted_speed_left = (1.25e-1) - (double)wait_ramp_rotate/100.0;
+                interrupt_add_pwm(&pwm);
+                wait_ramp_rotate++;
+                if(wait_ramp_rotate == 5)
+                {
+                    my_rover.rover_state = ROVER_ROTATE;
+                    wait_ramp_rotate = 0;
+                }
+            }break;
             case ROVER_ROTATE:
             {
                 //unsigned rotate = 60;
-                if(my_rover.ticks.tick_right >= my_rover.value.rotate_val)
+                if((my_rover.ticks.tick_right) >= my_rover.value.rotate_val)
                 {                 
+                    my_rover.ticks.tick_between_states_right = 0;
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
                 }
-                if(my_rover.ticks.tick_left >= my_rover.value.rotate_val)
+                if((my_rover.ticks.tick_left) >= my_rover.value.rotate_val)
                 {         
+                    my_rover.ticks.tick_between_states_left = 0;
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
                 }
+                
                 if(my_rover.bools.stop_left && my_rover.bools.stop_right){
 //**********************************************************************************                    
 //*******************************DEBUG**********************************************
@@ -767,16 +807,18 @@ void PROCESSING_Tasks() {
                     my_rover.ticks.tick_right= 0;
                     my_rover.bools.stop_left = false;
                     my_rover.bools.stop_right = false;
-                    pwm.wanted_speed_right = 1.4e-1;
-                    pwm.wanted_speed_left = 1.4e-1;
+                    pwm.wanted_speed_right = 1.5e-1;
+                    pwm.wanted_speed_left = 1.5e-1;
                     move_wheels(0,0); 
                 }
                 else
                 {
+                    pwm.wanted_speed_left = 1.1e-1;
+                    pwm.wanted_speed_right = 1.1e-1;
                     if(my_rover.ticks.tick_left >= my_rover.value.rotate_val - 200)
-                        pwm.wanted_speed_left = 1.1e-1;
+                        pwm.wanted_speed_left = 1.3e-1;
                     if(my_rover.ticks.tick_right >= my_rover.value.rotate_val - 200)
-                        pwm.wanted_speed_right = 1.1e-1;
+                        pwm.wanted_speed_right = 1.3e-1;
                 }
                 
                 interrupt_add_pwm(&pwm);
@@ -795,14 +837,16 @@ void PROCESSING_Tasks() {
             {
                 pwm.wanted_speed_right = 2e-1;
                 pwm.wanted_speed_left = 2e-1;
-                if(my_rover.ticks.tick_right >= 30)
+                if((my_rover.ticks.tick_right) >= 30)
                 {                 
+                    my_rover.ticks.tick_between_states_right = 0;
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
                 }
                 //original was TEN_CM(1)
-                if(my_rover.ticks.tick_left >= 30)
+                if((my_rover.ticks.tick_left)>= 30)
                 {         
+                    my_rover.ticks.tick_between_states_left = 0;
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
                 }
