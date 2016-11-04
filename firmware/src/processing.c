@@ -86,9 +86,6 @@ void PROCESSING_Tasks() {
     unsigned i;
     for (i = 0; i < 128*128; i++)
         grid[i] = ((i / 128 % 2) + (i % 128 % 2) + i) % 100;
-    
-    
-    network_send_add_message(&netstats_message);
 
     while (1) {
         // We responded to a request, so we increase the responses sent.
@@ -120,6 +117,12 @@ void PROCESSING_Tasks() {
                         send_message.type = NS_SEND_NAME_GEO;
                         network_send_add_message(&send_message);
                     } break;
+                    case NR_MOVEMENT:
+                    {
+                        OrientPoint op = {{{nr_message->data.movement.x, nr_message->data.movement.y},
+                                nr_message->data.movement.v, {0, 0, 0, 0}}, nr_message->data.movement.angle, nr_message->data.movement.av};
+                        world_update_movement(op);
+                    } break;
                     case NR_INITIALIZE:
                     {
                         astate = AS_SCANNING;
@@ -146,15 +149,21 @@ void PROCESSING_Tasks() {
             
             case PR_ADC_SAMPLES:
             {
-                float ir_front_right = recv_message.data.adc_samples.ir_front_right;
-                float ir_front_left = recv_message.data.adc_samples.ir_front_left;
-                float ir_left = recv_message.data.adc_samples.ir_left;
-                world_add_front_right_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_front_right +
-                        0.0000604419 * powf(ir_front_right, 2) - 3.009494425621623e-8 * powf(ir_front_right, 3)));
-                world_add_front_left_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_front_left +
-                        0.0000604419 * powf(ir_front_left, 2) - 3.009494425621623e-8 * powf(ir_front_left, 3)));
-                world_add_left_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_left +
-                        0.0000604419 * powf(ir_left, 2) - 3.009494425621623e-8 * powf(ir_left, 3)));
+                switch (astate) {
+                    case AS_SCANNING: {
+                        float ir_front_right = recv_message.data.adc_samples.ir_front_right;
+                        float ir_front_left = recv_message.data.adc_samples.ir_front_left;
+                        float ir_left = recv_message.data.adc_samples.ir_left;
+                        world_add_front_right_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_front_right +
+                                0.0000604419 * powf(ir_front_right, 2) - 3.009494425621623e-8 * powf(ir_front_right, 3)));
+                        world_add_front_left_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_front_left +
+                                0.0000604419 * powf(ir_front_left, 2) - 3.009494425621623e-8 * powf(ir_front_left, 3)));
+                        world_add_left_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_left +
+                                0.0000604419 * powf(ir_left, 2) - 3.009494425621623e-8 * powf(ir_left, 3)));
+                    } break;
+                    default:
+                        break;
+                }
             } break;
             
             default:
