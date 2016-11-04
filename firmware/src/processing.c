@@ -122,8 +122,13 @@ void init_rover()
     my_rover.home.y = 35;
     my_rover.ticks.tick_left = 0;
     my_rover.ticks.tick_right = 0;
-    my_rover.ticks.tick_between_states_left = 0;
-    my_rover.ticks.tick_between_states_right = 0;
+    my_rover.ticks.tick_edge_detect_right = 0;
+    my_rover.ticks.tick_distance_right = 0;
+    my_rover.ticks.tick_edge_detect_left = 0;
+    my_rover.ticks.tick_distance_left = 0;
+     my_rover.edge_vals.left = 0;
+     my_rover.edge_vals.right = 0;
+     my_rover.edge_vals.mid = 0;
     my_rover.bools.stop_left = false;
     my_rover.bools.stop_right = false;
     my_rover.bools.slow_left = false;
@@ -134,6 +139,7 @@ void init_rover()
     my_rover.bools.rotate = true;
     my_rover.bools.grabbed = false;
     my_rover.bools.dropped = false;
+    my_rover.bools.moved_right = false;
 }
 
 void path_init()
@@ -261,8 +267,9 @@ int my_path(uint8_t t_index)
 	}
     int target = target_list[t_index];
     unsigned int min = 0;
+    uint8_t path_offset = 8;
     //go east first
-    if (x + 1 < X && (find ||(!go_home && x+1 < target / OFFSET - 9)))
+    if (x + 1 < X && (find ||(!go_home && x+1 < target / OFFSET - path_offset)))
     {
         path_find_index_min(&index, &min, x+1, y);
     }
@@ -270,29 +277,29 @@ int my_path(uint8_t t_index)
         path_find_index_min(&index, &min, x - 1, y);
 
     //********NORTH***************
-    if (y + 1 < Y && (find || (!go_home && y+1 < target % OFFSET - 9))&& my_world[x][y + 1].difficulty < min)
+    if (y + 1 < Y && (find || (!go_home && y+1 < target % OFFSET - path_offset))&& my_world[x][y + 1].difficulty < min)
     {
         path_find_index_min(&index, &min, x, y+1);
     }
     //to check if we wanna go west
     //******************WEST******************
-   if (x - 1 >= 0 && (find || (!go_home && x - 1 < target / OFFSET + 9)) && my_world[x - 1][y].difficulty < min)
+   if (x - 1 >= 0 && (find || (!go_home && x - 1 < target / OFFSET + path_offset)) && my_world[x - 1][y].difficulty < min)
     {
         path_find_index_min(&index, &min, x -1, y);
     }
     /***********EAST***********/
-   if (x + 1 < X && (find || (!go_home && x + 1< target / OFFSET - 9)) && my_world[x + 1][y].difficulty < min)
+   if (x + 1 < X && (find || (!go_home && x + 1< target / OFFSET - path_offset)) && my_world[x + 1][y].difficulty < min)
     {
         path_find_index_min(&index, &min, x + 1, y);
     }
     //**********SOUTH**********
-    if (y - 1 >= 0 && (find || (!go_home && y - 1 < target % OFFSET - 9)) && my_world[x][y - 1].difficulty < min)
+    if (y - 1 >= 0 && (find || (!go_home && y - 1 < target % OFFSET - path_offset)) && my_world[x][y - 1].difficulty < min)
     {
         path_find_index_min(&index, &min,x, y-1);
     }
 
 
-    unsigned short int offset_bias = 11;
+    unsigned short int offset_bias = 10;
     if ((index / OFFSET < target_list[target_index] / OFFSET + offset_bias &&
         index / OFFSET > target_list[target_index] / OFFSET - offset_bias &&
         index % OFFSET < target_list[target_index] % OFFSET + offset_bias &&
@@ -304,12 +311,12 @@ int my_path(uint8_t t_index)
 
     if (index / OFFSET ==  my_rover.home.x && index % OFFSET == my_rover.home.y && go_home) 
         home = true;
-    s_message.type = NS_ROVER_DATA;
-                    s_message.data.rd.point.x = index/OFFSET;
-                    s_message.data.rd.point.y =  index%OFFSET;
-                    s_message.data.rd.ori = 0;
-                    s_message.data.rd.target = min;
-                    network_send_add_message(&s_message);
+//    s_message.type = NS_ROVER_DATA;
+//                    s_message.data.rd.point.x = my_world[x][y-1].difficulty/10;
+//                    s_message.data.rd.point.y =  my_world[x][y+1].difficulty/10;
+//                    s_message.data.rd.ori = 0;
+//                    s_message.data.rd.target = min;
+//                    network_send_add_message(&s_message);
 	return index;
 }
 void find_path(bool home)
@@ -423,6 +430,18 @@ void processing_add_pwm_reading(uint16_t left_pwm, uint16_t right_pwm,uint8_t tm
     {
         my_rover.ticks.tick_left += tmr4;
         my_rover.ticks.tick_right += tmr3;
+        if(my_rover.rover_state == ROVER_EDGE_DETECT)
+        {
+            my_rover.ticks.tick_edge_detect_right += tmr3;
+            my_rover.ticks.tick_edge_detect_left += tmr4;
+        }
+        else if(my_rover.rover_state == ROVER_EDGE_DETECT_BACK)
+        {
+            if(my_rover.ticks.tick_edge_detect_right)
+                my_rover.ticks.tick_edge_detect_right -= tmr3;
+            if(my_rover.ticks.tick_edge_detect_left)
+                my_rover.ticks.tick_edge_detect_left -= tmr4;
+        }
         output_left_avg += left_pwm;
         output_right_avg += right_pwm;
         processing_counter++;
@@ -437,8 +456,8 @@ void processing_add_pwm_reading(uint16_t left_pwm, uint16_t right_pwm,uint8_t tm
             pr_adc_message.data.timer.speed_right = output_right_avg;
             pr_adc_message.data.timer.tmr3 = tmr3;
             pr_adc_message.data.timer.tmr4 =  tmr4;
-            pr_adc_message.data.timer.left_error = my_rover.ticks.tick_between_states_left;
-            pr_adc_message.data.timer.right_error = my_rover.ticks.tick_between_states_right;
+            pr_adc_message.data.timer.left_error =left_error;
+            pr_adc_message.data.timer.right_error = right_error;
             output_left_avg = 0;
             output_right_avg = 0;
             BaseType_t higher_priority_task_woken = pdFALSE;
@@ -572,8 +591,13 @@ void PROCESSING_Tasks() {
                         send_message.type = NS_JC_REQ_HALF_ROW;
                         send_message.data.row_req = ++rows;
                         network_send_add_message(&send_message);
-                        wait_to_send_req_row = 0;
-                            
+                        wait_to_send_req_row = 0;                            
+                     }break;
+                     case NR_EDGE_DETECT:
+                     {
+                         my_rover.edge_vals.left = recv_message.data.nr_message.data.edge.left;
+                         my_rover.edge_vals.mid = recv_message.data.nr_message.data.edge.mid;
+                         my_rover.edge_vals.right = recv_message.data.nr_message.data.edge.right;
                      }break;
                      //TODO: Add a NR_REQ_TEST_RESET case such that you can reset the values and everything 
                      //you could also send back a send message to get a confirmation that the command was sent..or do it down in the case statement
@@ -619,12 +643,12 @@ void PROCESSING_Tasks() {
                     wait_to_send_req_row = 0;
                 }
                 //if you wanna test rotation via debug assign next_ori and current_ori and go to state ROVER_MOVE
-                //if((my_rover.bools.test_rotate || my_rover.bools.test_move))
-                if(rows == 127 && (my_rover.bools.test_rotate || my_rover.bools.test_move))
+                //if(rows == 127 && (my_rover.bools.test_rotate || my_rover.bools.test_move))
+                if((my_rover.bools.test_rotate || my_rover.bools.test_move))
                 {
                     blocks = 0;
                     my_rover.rover_state = ROVER_FIND_PATH;
-                    set_target();
+                    //set_target();
 //**********************************************************************************
 //************************BELOW IS FOR DEBUG****************************************
 //                    if(my_rover.bools.test_move)                          //******
@@ -653,7 +677,7 @@ void PROCESSING_Tasks() {
                 path_point = my_path(target_index);
                 int16_t x = path_point/OFFSET - my_rover.xy_points.x;
                 int16_t y = path_point%OFFSET - my_rover.xy_points.y;
-
+                
                 //****************************************************
                 if(x)
                 {
@@ -784,13 +808,11 @@ void PROCESSING_Tasks() {
                 //unsigned rotate = 60;
                 if((my_rover.ticks.tick_right) >= my_rover.value.rotate_val)
                 {                 
-                    my_rover.ticks.tick_between_states_right = 0;
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
                 }
                 if((my_rover.ticks.tick_left) >= my_rover.value.rotate_val)
                 {         
-                    my_rover.ticks.tick_between_states_left = 0;
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
                 }
@@ -839,14 +861,12 @@ void PROCESSING_Tasks() {
                 pwm.wanted_speed_left = 2e-1;
                 if((my_rover.ticks.tick_right) >= 30)
                 {                 
-                    my_rover.ticks.tick_between_states_right = 0;
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
                 }
                 //original was TEN_CM(1)
                 if((my_rover.ticks.tick_left)>= 30)
-                {         
-                    my_rover.ticks.tick_between_states_left = 0;
+                {
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
                 }
@@ -877,8 +897,6 @@ void PROCESSING_Tasks() {
                         find = false;
                         home = false;
                         go_home = false;
-                        my_rover.bools.stop_left = false;
-                        my_rover.bools.stop_right = false;
                         target_index++;
                         map_init();
                         if(target_index < target_size)
@@ -890,30 +908,96 @@ void PROCESSING_Tasks() {
                     }
                     else if(!find)
                     {
-                        my_rover.ticks.tick_left= 0;
-                        my_rover.ticks.tick_right= 0;
-                        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
                         my_rover.rover_state = ROVER_FIND_DIR;
-                        my_rover.bools.stop_left = false;
-                        my_rover.bools.stop_right = false;
                     }
                     else
                     {
-                        my_rover.ticks.tick_left= 0;
-                        my_rover.ticks.tick_right= 0;
-                        SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 0);
                         my_rover.rover_state = ROVER_GO_HOME;
                         if(!my_rover.bools.grabbed)
                         {
-                            my_rover.rover_state = ROVER_WAIT_GRAB;
+                            my_rover.ticks.tick_edge_detect_right= 0;
+                            my_rover.ticks.tick_edge_detect_left = 0;
+                            my_rover.rover_state = ROVER_EDGE_DETECT;
                             pwm.wanted_speed_right = 1.4e-1;
                             pwm.wanted_speed_left = 1.4e-1;
                         }
                         home = false;
-                        my_rover.bools.stop_left = false;
-                        my_rover.bools.stop_right = false;
+                    }
+
+                    my_rover.ticks.tick_left= 0;
+                    my_rover.ticks.tick_right= 0;
+                    my_rover.bools.stop_left = false;
+                    my_rover.bools.stop_right = false;
+                }
+                interrupt_add_pwm(&pwm);
+            }break;
+            case ROVER_EDGE_DETECT:
+            {
+                //this is turn EAST
+                if(my_rover.ori == EAST || my_rover.ori == WEST)
+                {
+                    my_rover.bools.moved_right = true;
+                    move_wheels(1,0);
+                    if(my_rover.xy_points.y < target_list[target_index]%OFFSET)
+                    {
+                        //turn left
+                        my_rover.bools.moved_right = false;
+                        move_wheels(0,1);
                     }
                 }
+                else //orientation is up or down
+                {
+                    my_rover.bools.moved_right = false;
+                    move_wheels(0,1);
+                    if(my_rover.xy_points.x < target_list[target_index]/OFFSET)
+                    {
+                        //turn right
+                        move_wheels(1,0);
+                        my_rover.bools.moved_right = true;
+                    }
+                }
+                 uint8_t wanted_val = 30;
+                 if(my_rover.edge_vals.left == wanted_val && my_rover.edge_vals.mid == wanted_val && my_rover.edge_vals.mid == wanted_val)
+                 {
+                     pwm.wanted_speed_right = 0;
+                     pwm.wanted_speed_left = 0;
+                     my_rover.rover_state = ROVER_WAIT_GRAB;
+                 }
+                 else if(my_rover.edge_vals.left <= wanted_val+20 ||
+                         my_rover.edge_vals.mid <= wanted_val+20 ||
+                         my_rover.edge_vals.right <= wanted_val+20)
+                 {
+                     pwm.wanted_speed_right = 0.8e-1;
+                     pwm.wanted_speed_left = 0.8e-1;
+                 }
+                 else if(my_rover.edge_vals.left <= wanted_val+30 ||
+                         my_rover.edge_vals.mid <= wanted_val+30 ||
+                         my_rover.edge_vals.right <= wanted_val+30)
+                 {
+                     pwm.wanted_speed_right = 1.1e-1;
+                     pwm.wanted_speed_left = 1.1e-1;
+                 }
+                 else if(my_rover.edge_vals.left >= wanted_val+50 &&
+                         my_rover.edge_vals.mid >= wanted_val+50 &&
+                         my_rover.edge_vals.right >= wanted_val+50)
+                 {
+                     my_rover.ticks.tick_edge_detect_right= 0;
+                     my_rover.ticks.tick_edge_detect_left = 0;
+                     pwm.wanted_speed_right = 0;
+                     pwm.wanted_speed_left = 0;
+                 }
+                 else
+                 {
+                     pwm.wanted_speed_right = 1.4e-1;
+                     pwm.wanted_speed_left = 1.4e-1;
+                 }
+                 
+                send_message.type = NS_ROVER_DATA;
+                send_message.data.rd.point.x = my_rover.ticks.tick_edge_detect_right;
+                send_message.data.rd.point.y =  my_rover.ticks.tick_edge_detect_left;
+                send_message.data.rd.ori = 0;
+                send_message.data.rd.target = my_rover.edge_vals.mid;
+                network_send_add_message(&send_message);
                 interrupt_add_pwm(&pwm);
             }break;
             case ROVER_WAIT_DROPPED:
@@ -941,7 +1025,7 @@ void PROCESSING_Tasks() {
                 pwm.wanted_speed_left = 0;
                 wait_grabbed++;
                 if(my_rover.bools.grabbed){
-                    my_rover.rover_state = ROVER_GO_HOME;
+                    my_rover.rover_state = ROVER_EDGE_DETECT_BACK;
                     wait_grabbed = 0;
                 }
                 else if(wait_grabbed == 300)
@@ -952,7 +1036,32 @@ void PROCESSING_Tasks() {
                 }
                 interrupt_add_pwm(&pwm);
             }break;
-            
+            case ROVER_EDGE_DETECT_BACK:
+            {
+                pwm.wanted_speed_right = 1.2e-1;
+                pwm.wanted_speed_left = 1.2e-1;
+                move_wheels(0,1);
+                if(my_rover.bools.moved_right)
+                    move_wheels(0,1);
+
+                if(my_rover.ticks.tick_edge_detect_right == 0)
+                    my_rover.bools.stop_right = true;
+                
+                if(my_rover.ticks.tick_edge_detect_left == 0)
+                    my_rover.bools.stop_left = true;
+                if(my_rover.bools.stop_left && my_rover.bools.stop_right)
+                {
+                    pwm.wanted_speed_right = 0;
+                    pwm.wanted_speed_left = 0;
+                    my_rover.bools.stop_right = false;
+                    my_rover.bools.stop_left = false;
+                     my_rover.ticks.tick_edge_detect_right= 0;
+                     my_rover.ticks.tick_edge_detect_left = 0;
+                    my_rover.rover_state = ROVER_GO_HOME;
+                    move_wheels(0,0); 
+                }
+                interrupt_add_pwm(&pwm);
+            }break;
             //***********************************
             //TODO: Move this all into a function + create the rotate functions
             //TODO2: Make the network signals for ROVER_ROTATE_R and ROVER_ROTATE_L -- mainly for debugging

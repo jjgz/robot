@@ -83,6 +83,9 @@ typedef enum{
             ROVER_WAIT_DROPPED,
             ROVER_RAMP,
             ROVER_RAMP_ROTATE,
+            ROVER_EDGE_DETECT,
+            ROVER_EDGE_DETECT_BACK,
+            ROVER_DISTANCE,
 }RStates;
 
 typedef union {
@@ -92,9 +95,11 @@ typedef union {
 
 typedef struct{
     uint32_t tick_left;
-    uint32_t tick_between_states_left;
     uint32_t tick_right;
-    uint32_t tick_between_states_right;
+    uint32_t tick_distance_left;
+    uint32_t tick_distance_right;
+    uint32_t tick_edge_detect_right;
+    uint32_t tick_edge_detect_left;
 }pwm_ticks;
 
 typedef struct{
@@ -111,6 +116,7 @@ typedef struct{
     bool stop_right;
     bool slow_left;
     bool slow_right;
+    bool moved_right;
     bool got_name;
     bool test_move;
     bool test_rotate;
@@ -120,6 +126,7 @@ typedef struct{
 }boolean_vals;
 
 typedef struct{
+    edge_detect edge_vals;
     pwm_ticks ticks;
     RStates rover_state;
     boolean_vals bools;
