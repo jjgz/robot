@@ -22,7 +22,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 (INCLUDING BUT NOT LIMITED TO ANY DEFENSE THEREOF), OR OTHER SIMILAR COSTS.
  *******************************************************************************/
 // DOM-IGNORE-END
-
+#include <math.h>
 #include "processing.h"
 #include "network/send.h"
 #include "debug.h"
@@ -122,10 +122,13 @@ void PROCESSING_Tasks() {
                     } break;
                     case NR_INITIALIZE:
                     {
-                        send_message.type = NS_DEBUG_GEORDON_STR;
                         astate = AS_SCANNING;
-                        
+                        OrientPoint ra = {{{nr_message->data.initialization.ra.x, nr_message->data.initialization.ra.y}, 0.0f, {0, 0, 0, 0}}, 0.0f, 0.0f};
+                        world_init(ra, nr_message->data.initialization.nt,
+                                3.0f, (AbsolutePoint*)nr_message->data.initialization.points,
+                                nr_message->data.initialization.nb);
                         // Send initialization confirmation after performing init.
+                        send_message.type = NS_DEBUG_GEORDON_STR;
                         send_message.data.dbstr = "Got initialize";
                         network_send_add_message(&send_message);
                     } break;
@@ -143,11 +146,15 @@ void PROCESSING_Tasks() {
             
             case PR_ADC_SAMPLES:
             {
-                netstats->numJSONResponsesSent++;
-                unsigned sample = recv_message.data.adc_samples.ultra_front;
-                send_message.type = NS_DEBUG_GEORDON_ADC;
-                send_message.data.adc_reading = sample;
-                network_send_add_message(&send_message);
+                float ir_front_right = recv_message.data.adc_samples.ir_front_right;
+                float ir_front_left = recv_message.data.adc_samples.ir_front_left;
+                float ir_left = recv_message.data.adc_samples.ir_left;
+                world_add_front_right_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_front_right +
+                        0.0000604419 * powf(ir_front_right, 2) - 3.009494425621623e-8 * powf(ir_front_right, 3)));
+                world_add_front_left_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_front_left +
+                        0.0000604419 * powf(ir_front_left, 2) - 3.009494425621623e-8 * powf(ir_front_left, 3)));
+                world_add_left_ir_sensor_reading(0.0833333 * (13.0619 - 0.043598 * ir_left +
+                        0.0000604419 * powf(ir_left, 2) - 3.009494425621623e-8 * powf(ir_left, 3)));
             } break;
             
             default:

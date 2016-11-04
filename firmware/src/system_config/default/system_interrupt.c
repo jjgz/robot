@@ -75,7 +75,7 @@ void IntHandlerDrvAdc(void)
 {
     PLIB_ADC_SampleAutoStartDisable(ADC_ID_1);
     if (DRV_ADC_SamplesAvailable()) {
-        int_adc_samples(DRV_ADC_SamplesRead(0), DRV_ADC_SamplesRead(1), DRV_ADC_SamplesRead(2), DRV_ADC_SamplesRead(3));
+        int_adc_samples(DRV_ADC_SamplesRead(0), DRV_ADC_SamplesRead(1), DRV_ADC_SamplesRead(2));
     }
     /* Clear ADC Interrupt Flag */
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_ADC_1);

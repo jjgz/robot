@@ -51,7 +51,7 @@ extern "C" {
 // DOM-IGNORE-END
 
 typedef struct {
-    unsigned ultra_front, ir_front, ir_left, ir_right;
+    unsigned ir_front_right, ir_front_left, ir_left;
 } AdcSamples;
     
 typedef enum {
