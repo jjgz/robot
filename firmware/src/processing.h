@@ -49,14 +49,19 @@ extern "C" {
 
 #endif
 // DOM-IGNORE-END
+
+typedef struct {
+    unsigned ultra_front, ir_front, ir_left, ir_right;
+} AdcSamples;
+    
 typedef enum {
-    PR_ADC,
+    PR_ADC_SAMPLES,
     PR_NR,
 } PRType;
 
 typedef union {
     NRMessage nr_message;
-    unsigned adc_sample;
+    AdcSamples adc_samples;
 } PRUnion;
 
 typedef struct {
@@ -64,6 +69,7 @@ typedef struct {
     PRUnion data;
 } PRMessage;
 void processing_add_recvmsg(NRMessage *message);
+void processing_add_message(PRMessage *message);
 
 void PROCESSING_Initialize();
 void PROCESSING_Tasks();

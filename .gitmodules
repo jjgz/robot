@@ -1,3 +1,6 @@
 [submodule "firmware/src/network"]
 	path = firmware/src/network
 	url = https://github.com/jjgz/network
+[submodule "firmware/src/world"]
+	path = firmware/src/world
+	url = git@github.com:jjgz/world.git

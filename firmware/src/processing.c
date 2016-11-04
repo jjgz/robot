@@ -27,8 +27,16 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "network/send.h"
 #include "debug.h"
 #include "int_adc.h"
+#include "world/world.h"
+
+typedef enum {
+    AS_WAIT_INIT,
+    AS_SCANNING,
+    AS_SUPPLY_GRID,
+} AState;
 
 QueueHandle_t processing_queue;
+AState astate;
 
 void processing_add_recvmsg(NRMessage *message) {
     PRMessage pr_message;
@@ -37,14 +45,10 @@ void processing_add_recvmsg(NRMessage *message) {
     xQueueSendToBack(processing_queue, &pr_message, portMAX_DELAY);
 }
 
-void processing_add_adc_reading(unsigned adc_sample){
-    PRMessage pr_adc_message;
-    pr_adc_message.type = PR_ADC;
-    pr_adc_message.data.adc_sample = adc_sample;
-    
+void processing_add_message(PRMessage *message) {
     BaseType_t higher_priority_task_woken = pdFALSE;
     // Attempt add the buffer from the isr to the queue.
-    if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
+    if (xQueueSendToBackFromISR(processing_queue, message, &higher_priority_task_woken)) {
         // If a higher priority task was waiting for something on the queue, switch to it.
         portEND_SWITCHING_ISR(higher_priority_task_woken);
     // We didn't receive a buffer.
@@ -56,7 +60,11 @@ void processing_add_adc_reading(unsigned adc_sample){
 }
 
 void PROCESSING_Initialize() {
+    astate = AS_WAIT_INIT;
     processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(PRMessage));
+    
+    DRV_ADC_Open();
+    DRV_TMR0_Start();
 }
 
 uint8_t grid[128 * 128];
@@ -112,6 +120,15 @@ void PROCESSING_Tasks() {
                         send_message.type = NS_SEND_NAME_GEO;
                         network_send_add_message(&send_message);
                     } break;
+                    case NR_INITIALIZE:
+                    {
+                        send_message.type = NS_DEBUG_GEORDON_STR;
+                        astate = AS_SCANNING;
+                        
+                        // Send initialization confirmation after performing init.
+                        send_message.data.dbstr = "Got initialize";
+                        network_send_add_message(&send_message);
+                    } break;
                     case NR_GD_REQ_HALF_ROW:
                     {
                         for (i = 0; i < 64; i++)
@@ -124,10 +141,10 @@ void PROCESSING_Tasks() {
                 }
             } break;
             
-            case PR_ADC:
+            case PR_ADC_SAMPLES:
             {
                 netstats->numJSONResponsesSent++;
-                unsigned sample = recv_message.data.adc_sample;
+                unsigned sample = recv_message.data.adc_samples.ultra_front;
                 send_message.type = NS_DEBUG_GEORDON_ADC;
                 send_message.data.adc_reading = sample;
                 network_send_add_message(&send_message);

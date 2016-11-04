@@ -73,16 +73,23 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 // *****************************************************************************
 void IntHandlerDrvAdc(void)
 {
-    //debug_loc(DEBUG_INTADC_ENTER);
+    PLIB_ADC_SampleAutoStartDisable(ADC_ID_1);
     if (DRV_ADC_SamplesAvailable()) {
-        int_adc_sample(PLIB_ADC_ResultGetByIndex(DRV_ADC_ID_1, 0));
+        int_adc_samples(DRV_ADC_SamplesRead(0), DRV_ADC_SamplesRead(1), DRV_ADC_SamplesRead(2), DRV_ADC_SamplesRead(3));
     }
-    PLIB_ADC_SampleAutoStartEnable(DRV_ADC_ID_1);
     /* Clear ADC Interrupt Flag */
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_ADC_1);
-    //debug_loc(DEBUG_INTADC_LEAVE);
 }
 
+
+
+
+    
+void IntHandlerDrvTmrInstance0(void)
+{
+    PLIB_ADC_SampleAutoStartEnable(ADC_ID_1);
+    PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
+}
  void IntHandlerDrvUsartInstance0(void)
 {
     if (SYS_INT_SourceStatusGet(INT_SOURCE_USART_1_RECEIVE)) {

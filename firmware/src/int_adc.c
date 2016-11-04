@@ -1,28 +1,13 @@
 #include "int_adc.h"
-#include "network/send.h"
-#include "debug.h"
+#include "processing.h"
 
-#define NUM_SAMPLES_BEFORE_SEND 500
+PRMessage message;
 
-unsigned samples_collected;
-unsigned sample_accumulator;
-
-void int_adc_init() {
-    samples_collected = 0;
-    sample_accumulator = 0;
-}
-
-void int_adc_sample(unsigned sample) {
-    sample_accumulator += sample;
-    samples_collected++;
-    if (samples_collected == NUM_SAMPLES_BEFORE_SEND) {
-        samples_collected = 0;
-        //debug_loc(sample_accumulator / NUM_SAMPLES_BEFORE_SEND);
-        //NSMessage message;
-        //message.type = NS_ADC_READING;
-        //message.data.adc_reading.reading = PLIB_ADC_ResultGetByIndex(DRV_ADC_ID_1, 0);
-        //debug_loc(message.data.adc_reading.reading / NUM_SAMPLES_BEFORE_SEND);
-        processing_add_adc_reading(sample_accumulator / NUM_SAMPLES_BEFORE_SEND);
-        sample_accumulator = 0;
-    }
+void int_adc_samples(unsigned ultra_front, unsigned ir_front, unsigned ir_left, unsigned ir_right) {
+    message.type = PR_ADC_SAMPLES;
+    message.data.adc_samples.ultra_front = ultra_front;
+    message.data.adc_samples.ir_front = ir_front;
+    message.data.adc_samples.ir_left = ir_left;
+    message.data.adc_samples.ir_right = ir_right;
+    processing_add_message(&message);
 }
