@@ -86,6 +86,13 @@ typedef enum{
             ROVER_EDGE_DETECT,
             ROVER_EDGE_DETECT_BACK,
             ROVER_DISTANCE,
+            ROVER_DISTANCE_BACK,
+            ROVER_ENSURE_STOP,
+            ROVER_ENSURE_STOP2,
+            ROVER_ENSURE_STOP3,
+            ROVER_ENSURE_STOP4,
+            ROVER_ROTATE_CORRECTION,
+            
 }RStates;
 
 typedef union {
@@ -96,6 +103,10 @@ typedef union {
 typedef struct{
     uint32_t tick_left;
     uint32_t tick_right;
+    uint32_t prev_tick_left;
+    uint32_t prev_tick_right;
+    uint32_t rotate_tick_left;
+    uint32_t rotate_tick_right;
     uint32_t tick_distance_left;
     uint32_t tick_distance_right;
     uint32_t tick_edge_detect_right;
@@ -123,6 +134,8 @@ typedef struct{
     bool rotate;
     bool grabbed;
     bool dropped;
+    bool straight;
+    bool rotate_correct;
 }boolean_vals;
 
 typedef struct{
@@ -136,6 +149,7 @@ typedef struct{
     rotate_val value;
     orientation ori;
     orientation next_ori;
+    uint8_t distance;
 }rover;
 
 typedef struct {
