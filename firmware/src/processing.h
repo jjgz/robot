@@ -61,16 +61,25 @@ typedef enum {
     LEADER_INIT,
             LEADER_MOVE,
             LEADER_WAIT,
-            LEADER_RIGHT,
-            LEADER_LEFT,
+            LEADER_TURN,
             LEADER_STOP,
+            LEADER_TURN_STOP,
+            LEADER_BORDER,
             LEADER_BACK,
             LEADER_STALL,
 }LStates;
 
+typedef enum {
+    RIGHT_FIRST,
+    LEFT_FIRST,
+    BACK_UP,
+    FORWARD,
+    FINISHED,
+    BORDER_WAIT,
+}BStates;
 typedef union {
     NRMessage nr_message;    
-    TimerDebug timer;   
+    TimerJGDebug timer;   
     MSGDebugJoeTread debug_joe_tread;
 } PRUnion;
 
@@ -91,20 +100,30 @@ typedef struct{
     double target_right_spd;
 }pwm_to_isr;
 
+typedef struct{
+    double dist_thresh;
+    double border_thresh;
+}thresh;
 typedef struct {
     pwm_ticks ticks;
     LStates lead_state;
+    BStates border;
     bool stop_left;
     bool stop_right;
     bool slow_left;
     bool slow_right;
-    bool got_cmnd;    
+    thresh thresholds;
+    bool got_cmnd;
+    ldr_move ldr_m;
+    SensorReading sensors;
+    
 }leader;
 
 void processing_add_recvmsg(NRMessage *message);
 void interrupt_add_pwm(pwm_to_isr *pwm);
 void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
 void processing_change_rover_state(uint32_t timer_state);
+void leader_state_change(double ultrasonic, double left_photo, double right_photo, double prev_left, double prev_right, double dist_thresh, double border_thresh);
 void enable_start();
 void leader_move(unsigned right, unsigned left);
 void PROCESSING_Initialize();

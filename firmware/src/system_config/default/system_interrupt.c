@@ -113,8 +113,7 @@ void IntHandlerDrvTmrInstance1(void)
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_4);
 }
 void IntHandlerDrvTmrInstance2(void)
-{
-    
+{    
         pwm_to_isr recv_pwm;
         if(!xQueueIsQueueEmptyFromISR(interrupt_queue))
         {       
@@ -128,6 +127,7 @@ void IntHandlerDrvTmrInstance2(void)
         uint16_t output_l = clamp(pid_output(&pid_left,  target_left_spd - scaling_left * (double)DRV_TMR1_CounterValueGet(),1e1,1e3,0),0,65535);
    
         processing_add_pwm_reading(output_l, output_r, DRV_TMR0_CounterValueGet(), DRV_TMR1_CounterValueGet());
+        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
         DRV_TMR0_CounterClear();
         DRV_TMR1_CounterClear();
         PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_r);
