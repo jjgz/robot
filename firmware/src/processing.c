@@ -41,6 +41,7 @@ extern double target_right_spd;
 extern double target_left_spd;
 unsigned output_left_avg;
 unsigned output_right_avg;
+<<<<<<< HEAD
 
 <<<<<<< HEAD
 void rover_init(){
@@ -55,6 +56,11 @@ void rover_init(){
     rover.got_cmnd = false;
 }
 =======
+bool map[128][128];
+
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+=======
+
 bool map[128][128];
 
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
@@ -92,6 +98,7 @@ void processing_add_recvmsg(NRMessage *message) {
     xQueueSendToBack(processing_queue, &pr_message, portMAX_DELAY);
 }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 /*void processing_change_rover_state(uint32_t timer_state){
     PRMessage pr_pwm_message;
@@ -154,6 +161,27 @@ void processing_add_adc_reading(unsigned adc_sample){
 }
 
 void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4){
+=======
+void processing_add_adc_reading(unsigned adc_sample){
+    PRMessage pr_adc_message;
+    pr_adc_message.type = PR_ADC;
+    pr_adc_message.data.adc_sample = adc_sample;
+    
+    BaseType_t higher_priority_task_woken = pdFALSE;
+    // Attempt add the buffer from the isr to the queue.
+    if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
+        // If a higher priority task was waiting for something on the queue, switch to it.
+        portEND_SWITCHING_ISR(higher_priority_task_woken);
+    // We didn't receive a buffer.
+    } else {
+        // Indicate on LD4 that we lost a packet.
+        // NOTE: LD4 conflicts with SDA2 (I2C).
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+    }
+}
+
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4){
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
     PRMessage pr_pwm_message;
     
     
@@ -182,6 +210,9 @@ void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t 
             SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
         }         
     }    
+<<<<<<< HEAD
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+=======
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
 }
 void interrupt_add_pwm(pwm_to_isr * pwm){
@@ -298,6 +329,7 @@ void PROCESSING_Tasks() {
                     case NR_DEBUG_JOE_TREAD:
                     {
 <<<<<<< HEAD
+<<<<<<< HEAD
                         //left = nr_message->data.debug_joe_tread.left;
                         //right = nr_message->data.debug_joe_tread.right;
                         /*rover_init();
@@ -309,6 +341,8 @@ void PROCESSING_Tasks() {
                         rover.ticks.t_left = 0;
                         interrupt_add_pwm(&pwm);*/
 =======
+=======
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
                         left = nr_message->data.debug_joe_tread.left;
                         right = nr_message->data.debug_joe_tread.right;
                         rover.lead_state = LEADER_INIT;
@@ -439,6 +473,9 @@ void PROCESSING_Tasks() {
                         //right = 0;
                         //rover.ticks.t_right = 0;
                         //rover.ticks.t_left = 0;
+<<<<<<< HEAD
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+=======
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
                         //pwm.target_left_spd = 2e-1;
                         //pwm.target_right_spd = 2e-1;
@@ -518,12 +555,48 @@ void PROCESSING_Tasks() {
                             interrupt_add_pwm(&pwm);
                         }*/
                     }break;
+<<<<<<< HEAD
                      
+=======
+                     case NR_JE:
+                     {
+                         /*int tmp_x = nr_message->data.point.x;
+                         int tmp_y = nr_message->data.point.y;
+                         int i;
+                         int j;
+                         for(i = 0; i <= tmp_x;i++){
+                             if(i == tmp_x){
+                                 for(j=0; j <= tmp_y;j++){
+                                     if(j == tmp_y){
+                                         map[i][j]=0;
+                                     }
+                                 }
+                             }
+                         }*/
+                     } break;
+                     case NR_JF:
+                     {
+                         /*int tmp_r = nr_message->data.point.x;
+                         int tmp_c = nr_message->data.point.y;
+                         int i;
+                         int j;
+                         for(i = 0; i <= tmp_r;i++){
+                             if(i == tmp_r){
+                                 for(j=0; j <= tmp_c;j++){
+                                     if(j == tmp_c){
+                                         map[i][j]=0;
+                                     }
+                                 }
+                             }
+                         }*/
+                     } break;
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
                     default:
                         break;
                 }       
             } break;
             case PR_PWM:
+<<<<<<< HEAD
 <<<<<<< HEAD
             { 
                 
@@ -535,6 +608,8 @@ void PROCESSING_Tasks() {
                 //send_message.data.tmr.r_spd = processing_counter;
                 network_send_add_message(&send_message);
 =======
+=======
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
             {
                 // PLIB_OC_PulseWidth16BitSet(OC_ID_1, recv_message.data.timer.tmr3);
                 //PLIB_OC_PulseWidth16BitSet(OC_ID_2, recv_message.data.timer.tmr4);
@@ -544,6 +619,9 @@ void PROCESSING_Tasks() {
                 
                 send_message.data.tmr.l_spd = recv_message.data.timer.l_spd;
                 send_message.data.tmr.r_spd = recv_message.data.timer.r_spd;
+<<<<<<< HEAD
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+=======
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
                 //send_message.data.tmr.l_spd = 100.50;
                 //send_message.data.tmr.r_spd = 100.50;
@@ -554,6 +632,7 @@ void PROCESSING_Tasks() {
             } break;
             case PR_TMR:
             {
+<<<<<<< HEAD
 <<<<<<< HEAD
                 
             } break;            
@@ -760,6 +839,25 @@ void PROCESSING_Tasks() {
             default:
                 break;               
         }
+=======
+                /*send_message.type = NS_DEBUG_OC;
+                if(recv_message.data.timer.tmr4 > 10000){
+                    pwm.target_right_spd = 2e-5;
+                    pwm.target_left_spd = 2e-5;
+                    interrupt_add_pwm(&pwm);
+                }*/
+            } break;
+            case PR_ADC:
+            {
+                //TODO:: ADC DATA
+                //send_message.type = NS_ADC_READING;
+                //send_message.data.adc_reading.reading = recv_message.data.adc_sample;
+                //network_send_add_message(&send_message);
+            } break;
+            default:
+                break;               
+        }
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
         
 //        switch(rover.lead_state){
 //            case LEADER_INIT:
@@ -776,6 +874,9 @@ void PROCESSING_Tasks() {
 //                interrupt_add_pwm(&pwm);
 //            }break;
 //        }
+<<<<<<< HEAD
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+=======
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
     }
 }

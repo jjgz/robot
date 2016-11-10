@@ -78,14 +78,20 @@ typedef enum {
 }BStates;
 typedef union {
 <<<<<<< HEAD
+<<<<<<< HEAD
     NRMessage nr_message;    
     TimerJGDebug timer;   
 =======
+=======
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
     NRMessage nr_message;
     unsigned adc_sample;
     TimerDebug timer;
     bool left_mvmnt;
     bool right_mvmnt;
+<<<<<<< HEAD
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+=======
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
     MSGDebugJoeTread debug_joe_tread;
 } PRUnion;
@@ -120,24 +126,33 @@ typedef struct {
     bool slow_left;
     bool slow_right;
 <<<<<<< HEAD
+<<<<<<< HEAD
     thresh thresholds;
     bool got_cmnd;
     ldr_move ldr_m;
     SensorReading sensors;
     
 =======
+=======
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
     //uint32_t time_r;
     //uint32_t time_l;
     //uint32_t last_rmotor;
     //uint32_t last_lmotor;
+<<<<<<< HEAD
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+=======
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
 }leader;
 void processing_add_recvmsg(NRMessage *message);
 void interrupt_add_pwm(pwm_to_isr *pwm);
 void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
 <<<<<<< HEAD
+<<<<<<< HEAD
 void processing_change_rover_state(uint32_t timer_state);
 void leader_state_change(double ultrasonic, double left_photo, double right_photo, double prev_left, double prev_right, double dist_thresh, double border_thresh);
+=======
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
 =======
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
 void enable_start();

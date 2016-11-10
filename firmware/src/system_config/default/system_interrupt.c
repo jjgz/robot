@@ -113,6 +113,7 @@ void IntHandlerDrvTmrInstance1(void)
 }
 void IntHandlerDrvTmrInstance2(void)
 <<<<<<< HEAD
+<<<<<<< HEAD
 {    
         pwm_to_isr recv_pwm;
         if(!xQueueIsQueueEmptyFromISR(interrupt_queue))
@@ -150,6 +151,24 @@ void IntHandlerDrvTmrInstance2(void)
     uint16_t output_r = clamp(pid_output(&pid_right, target_right_spd - scaling_right * (double)DRV_TMR1_CounterValueGet(),1e1,1e3,0),0,65535);
     uint16_t output_l = clamp(pid_output(&pid_left,  target_left_spd - scaling_left * (double)DRV_TMR0_CounterValueGet(),1e1,1e3,0),0,65535);
    
+=======
+{
+    //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+    pwm_to_isr recv_pwm;
+    if(!xQueueIsQueueEmptyFromISR(interrupt_queue))
+    {
+        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1,1);
+        xQueueReceiveFromISR(interrupt_queue, &recv_pwm, 0);
+        //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+        target_right_spd = recv_pwm.target_right_spd;
+        target_left_spd = recv_pwm.target_left_spd;
+    }
+    const double scaling_left = 1.0;
+    const double scaling_right = 1.020;
+    uint16_t output_r = clamp(pid_output(&pid_right, target_right_spd - scaling_right * (double)DRV_TMR1_CounterValueGet(),1e1,1e3,0),0,65535);
+    uint16_t output_l = clamp(pid_output(&pid_left,  target_left_spd - scaling_left * (double)DRV_TMR0_CounterValueGet(),1e1,1e3,0),0,65535);
+   
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
     processing_add_pwm_reading(output_l, output_r, DRV_TMR0_CounterValueGet(), DRV_TMR1_CounterValueGet());
     DRV_TMR0_CounterClear();
     DRV_TMR1_CounterClear();
@@ -158,6 +177,9 @@ void IntHandlerDrvTmrInstance2(void)
     PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_r);
     PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_l);
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_TIMER_5);
+<<<<<<< HEAD
+>>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+=======
 >>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
 }
 
