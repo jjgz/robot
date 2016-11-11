@@ -663,7 +663,7 @@ void PROCESSING_Tasks() {
                 my_rover.ticks.tick_right = 0;
                 my_rover.ticks.tick_left = 0;
                 wait_to_send_req_row++;
-                  if(wait_to_send_req_row == 10)
+                if(wait_to_send_req_row == 6)
                 {
                     send_message.type = NS_JC_REQ_HALF_ROW;
                     send_message.data.row_req = rows;
@@ -671,26 +671,11 @@ void PROCESSING_Tasks() {
                     
                     wait_to_send_req_row = 0;
                 }               
-//                if(wait_to_send_req_row == 500)
-//                {
-//                    send_message.type = NS_JC_REQ_HALF_ROW;
-//                    send_message.data.row_req = rows;
-//                    network_send_add_message(&send_message);
-//                    
-//                    wait_to_send_req_row = 0;
-//                }
-                //if you wanna test rotation via debug assign next_ori and current_ori and go to state ROVER_MOVE
-                //if((my_rover.bools.test_rotate || my_rover.bools.test_move))
-                if(rows == 206)// && (my_rover.bools.test_rotate || my_rover.bools.test_move))
-                {
-                    blocks = 0;
-                    my_rover.rover_state = ROVER_FIND_PATH;
-                    send_message.type = NS_ROVER_DATA;
-                    //set_target();
+                
 //**********************************************************************************
 //************************BELOW IS FOR DEBUG****************************************
 //                    if(my_rover.bools.test_move)                          //******
-//                        my_rover.rover_state = ROVER_MOVE;                //******
+//                        my_rover.rover_state = ROVER_BLOCK;                //******
 //                    if(my_rover.bools.test_rotate)                        //******
 //                    {                                                     //******
 //                        my_rover.rover_state = ROVER_MOVE;                //******
@@ -698,6 +683,13 @@ void PROCESSING_Tasks() {
 //                    }                                                     //******
 //**********************************************************************************
 //**********************************************************************************
+                
+                //if you wanna test rotation via debug assign next_ori and current_ori and go to state ROVER_MOVE
+                //if((my_rover.bools.test_rotate || my_rover.bools.test_move))
+                if(rows == 206)// && (my_rover.bools.test_rotate || my_rover.bools.test_move))
+                {
+                    blocks = 0;
+                    my_rover.rover_state = ROVER_FIND_PATH;
                 }
             }break;
             case ROVER_FIND_PATH:
@@ -865,13 +857,13 @@ void PROCESSING_Tasks() {
             case ROVER_ROTATE:
             {
                 //unsigned rotate = 60;
-                if((my_rover.ticks.tick_right) >= my_rover.value.rotate_val)
+                if((my_rover.ticks.tick_right) >= my_rover.value.rotate_val-10)
                 {                 
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
                     my_rover.ticks.rotate_tick_right = my_rover.ticks.tick_right;
                 }
-                if((my_rover.ticks.tick_left) >= my_rover.value.rotate_val)
+                if((my_rover.ticks.tick_left) >= my_rover.value.rotate_val-10)
                 {         
                     my_rover.ticks.tick_left= 0;
                     my_rover.ticks.rotate_tick_left = my_rover.ticks.tick_left;
@@ -965,9 +957,11 @@ void PROCESSING_Tasks() {
 //***********************THIS IS FOR DEBUG******************************************
 //                 if(my_rover.bools.stop_left && my_rover.bools.stop_right) //*****
 //                {                                                          //*****
+//                    my_rover.ticks.tick_left= 0;                           //*****
+//                    my_rover.ticks.tick_right= 0;                          //*****
 //                     my_rover.rover_state = ROVER_STOP;                    //*****
 //                     if(my_rover.debug_test.test_move_val--)               //*****
-//                         my_rover.rover_state = ROVER_MOVE;                //*****
+//                         my_rover.rover_state = ROVER_BLOCK;               //*****
 //                }                                                          //*****
 //**********************************************************************************
 //***********************UNCOMMENT BELOW FOR ACTUAL*********************************

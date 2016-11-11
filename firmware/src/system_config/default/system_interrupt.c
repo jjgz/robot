@@ -112,7 +112,7 @@ void IntHandlerDrvTmrInstance2(void)
     }
  
     const double left_scale = 1.0;
-    const double right_scale = 1.020;
+    const double right_scale = 0.9999;
     uint16_t output_right = clamp(pid_output(&controller_right, wanted_speed_right - right_scale * (double)DRV_TMR1_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
     double right_error = controller_right.accumulator;
     uint16_t output_left = clamp(pid_output(&controller_left, wanted_speed_left - left_scale * (double)DRV_TMR0_CounterValueGet(), 1e1, 1e3, 0), 0, 65535);
