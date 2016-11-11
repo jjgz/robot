@@ -170,71 +170,14 @@ void map_init()
 		for (j = 0; j < Y; j++)
 		{
 			my_world[i][j].difficulty = 65535;
-			my_world[i][j].weight = MAX_WEIGHT;
+            my_world[i][j].weight = MAX_WEIGHT;
 		}
 	}
-
-	//Thi is set for 2x2 (ft) grid
-	for (i = 103; i >= 25; i--)
-	{
-		for (j = 25; j < 103; j++)
-		{
-			my_world[j][i].weight = 10;
-		}
-	}
-	set_block(55, 40);
-	set_block(75, 40);
-	set_block(60, 58);
+//	set_block(55, 40);
+//	set_block(75, 40);
+//	set_block(60, 58);
 	//set_block(40, 35);
-    set_target();
-}
-void set_block(int x, int y)
-{
-    int off1 = 10;
-	int off2 = 11;
-    int i,j;
-	for (i = x-off1; i < x+off2; i++)
-	{
-		for (j = y - off1; j < y + off2; j++)
-		{
-			if (i < x - 9 || j < y - 9 || i > x + 9 || j > y + 9)
-				my_world[i][j].weight = 25;
-			else if (i < x - 8 || j < y - 8 || i > x + 8 || j > y + 8)
-				my_world[i][j].weight = 35;
-			else if (i < x - 7 || j < y - 7 || i > x + 7 || j > y + 7)
-				my_world[i][j].weight = 45;
-			else if (i < x - 6 || j < y - 6 || i > x + 6 || j > y + 6)
-				my_world[i][j].weight = 55;
-			else if (i < x - 5 || j < y - 5 || i > x + 5 || j > y + 5)
-				my_world[i][j].weight = 65;
-			else if (i < x - 4 || j < y - 4 || i > x + 4 || j > y + 4)
-				my_world[i][j].weight = 70;
-			else if (i  < x - 3 || j < y - 3 || i > x + 3 || j > y + 3)
-				my_world[i][j].weight = 80;
-			else
-				my_world[i][j].weight = 99;
-		}
-	}
-}
-void set_target()
-{
-    int i, j, k = 0;
-    while(k < target_size)
-    {
-        int x = target_list[target_index]/OFFSET;
-        int y = target_list[target_index]%OFFSET;
-        
-        for (i = x-1; i < x+2; i++)
-        {
-            for (j = y-1; j < y+2; j++)
-            {
-            	my_world[i][j].weight = 80;
-            	if (i == x && j ==y)
-            		my_world[i][j].weight = 99;
-            }
-        }
-        k++;
-    }
+   //set_target();
 }
 void path_find_index_min(int *index, unsigned int *min, unsigned short int x, unsigned short int y)
 {
@@ -282,7 +225,7 @@ int my_path(uint8_t t_index)
     {
         case NORTH:
         {
-            if (y + 1 < Y && (find || (!go_home && y+1 < target % OFFSET - path_offset)))
+            if (y + 1 < Y && (find || (!go_home)))
             {
                 path_find_index_min(&index, &min, x, y+1);
             }
@@ -292,21 +235,21 @@ int my_path(uint8_t t_index)
         }break;
         case SOUTH:
         {
-            if (y - 1 >= 0 && (find || (!go_home && y - 1 < target % OFFSET - path_offset)))
+            if (y - 1 >= 0 && (find || (!go_home)))
                 path_find_index_min(&index, &min,x, y-1);
             else
                 path_find_index_min(&index, &min, x, y+1);
         }break;
         case EAST:
         {
-            if (x + 1 < X && (find ||(!go_home && x+1 < target / OFFSET - path_offset)))
+            if (x + 1 < X && (find ||(!go_home)))
                 path_find_index_min(&index, &min, x+1, y);
             else
                  path_find_index_min(&index, &min, x - 1, y);
         }break;
         case WEST:
         {
-            if (x - 1 >= 0 && (find ||(!go_home && x-1 < target / OFFSET - path_offset)))
+            if (x - 1 >= 0 && (find ||(!go_home)))
                 path_find_index_min(&index, &min, x - 1, y);
             else
                 path_find_index_min(&index, &min, x+1, y);
@@ -319,23 +262,23 @@ int my_path(uint8_t t_index)
     }
 
     //********NORTH***************
-    if (y + 1 < Y && (find || (!go_home && y+1 < target % OFFSET - path_offset))&& my_world[x][y + 1].difficulty < min)
+    if (y + 1 < Y && (find || (!go_home))&& my_world[x][y + 1].difficulty < min)
     {
         path_find_index_min(&index, &min, x, y+1);
     }
     //to check if we wanna go west
     //******************WEST******************
-   if (x - 1 >= 0 && (find || (!go_home && x - 1 < target / OFFSET + path_offset)) && my_world[x - 1][y].difficulty < min)
+   if (x - 1 >= 0 && (find || (!go_home)) && my_world[x - 1][y].difficulty < min)
     {
         path_find_index_min(&index, &min, x -1, y);
     }
     /***********EAST***********/
-   if (x + 1 < X && (find || (!go_home && x + 1< target / OFFSET - path_offset)) && my_world[x + 1][y].difficulty < min)
+   if (x + 1 < X && (find || (!go_home)) && my_world[x + 1][y].difficulty < min)
     {
         path_find_index_min(&index, &min, x + 1, y);
     }
     //**********SOUTH**********
-    if (y - 1 >= 0 && (find || (!go_home && y - 1 < target % OFFSET - path_offset)) && my_world[x][y - 1].difficulty < min)
+    if (y - 1 >= 0 && (find || (!go_home)) && my_world[x][y - 1].difficulty < min)
     {
         path_find_index_min(&index, &min,x, y-1);
     }
@@ -378,6 +321,13 @@ void find_path(bool home)
         my_world[target_list[target_index] / OFFSET][target_list[target_index] % OFFSET].weight = 0;
         EDGES[0].x = target_list[target_index] / OFFSET;//<80,80>
         EDGES[0].y = target_list[target_index] % OFFSET;
+        
+        s_message.type = NS_ROVER_DATA;
+        s_message.data.rd.point.x = target_list[target_index] / OFFSET;
+        s_message.data.rd.point.y = my_world[80][81].weight;
+        s_message.data.rd.ori = 0;
+        s_message.data.rd.target = my_world[81][80].weight;
+        network_send_add_message(&s_message);
     }
 	edges_size = 1;
 	unsigned short int world_diff_n;
@@ -548,7 +498,7 @@ void interrupt_add_pwm(pwm_to_isr *pwm)
 }
 void PROCESSING_Initialize() {
     enable_init();
-    processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(NRMessage));
+    processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(PRMessage));
     interrupt_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(pwm_to_isr));
 }
 
@@ -571,7 +521,7 @@ void PROCESSING_Tasks() {
    int wait_grabbed = 0;
    int wait_ramp_rotate = 0;
    int wait_to_send_req_row = 0;
-   uint8_t rows = 0;
+   uint16_t rows = 50;
     network_send_add_message(&netstats_message);
 
     while (1) {
@@ -651,10 +601,21 @@ void PROCESSING_Tasks() {
                         for(i = 0; i < 64; i++)
                         {
                             my_world[((rows%2)*64)+i][rows >> 1].weight = recv_message.data.nr_message.data.w_array[i];
+//                            if(((rows%2)*64)+i == 80)
+//                            {
+//                                send_message.type = NS_ROVER_DATA;
+//                                send_message.data.rd.point.x = target_list[target_index] / OFFSET;
+//                                send_message.data.rd.point.y = my_world[80][81].weight;
+//                                send_message.data.rd.ori = 1;
+//                                send_message.data.rd.target = 400;
+//                                network_send_add_message(&send_message);
+//                            }
                         }
+                         
                         send_message.type = NS_JC_REQ_HALF_ROW;
                         send_message.data.row_req = ++rows;
-                        network_send_add_message(&send_message);
+                        if(rows < 206)
+                            network_send_add_message(&send_message);
                         wait_to_send_req_row = 0;                            
                      }break;
                      case NR_EDGE_DETECT:
@@ -702,20 +663,29 @@ void PROCESSING_Tasks() {
                 my_rover.ticks.tick_right = 0;
                 my_rover.ticks.tick_left = 0;
                 wait_to_send_req_row++;
-                if(wait_to_send_req_row == 5)
+                  if(wait_to_send_req_row == 10)
                 {
                     send_message.type = NS_JC_REQ_HALF_ROW;
                     send_message.data.row_req = rows;
                     network_send_add_message(&send_message);
                     
                     wait_to_send_req_row = 0;
-                }
+                }               
+//                if(wait_to_send_req_row == 500)
+//                {
+//                    send_message.type = NS_JC_REQ_HALF_ROW;
+//                    send_message.data.row_req = rows;
+//                    network_send_add_message(&send_message);
+//                    
+//                    wait_to_send_req_row = 0;
+//                }
                 //if you wanna test rotation via debug assign next_ori and current_ori and go to state ROVER_MOVE
                 //if((my_rover.bools.test_rotate || my_rover.bools.test_move))
-                if(rows == 127)// && (my_rover.bools.test_rotate || my_rover.bools.test_move))
+                if(rows == 206)// && (my_rover.bools.test_rotate || my_rover.bools.test_move))
                 {
                     blocks = 0;
                     my_rover.rover_state = ROVER_FIND_PATH;
+                    send_message.type = NS_ROVER_DATA;
                     //set_target();
 //**********************************************************************************
 //************************BELOW IS FOR DEBUG****************************************
@@ -972,28 +942,6 @@ void PROCESSING_Tasks() {
                     my_rover.ticks.tick_left = 0;
                 }   
             }break;
-//            case ROVER_ROTATE_CORRECTION:
-//            {          
-//                my_rover.bools.rotate_correct = true;
-//                pwm.wanted_speed_right = 1.0e-1;
-//                pwm.wanted_speed_left = 1.0e-1;
-//                if(my_rover.ticks.rotate_tick_right == 0)
-//                    my_rover.bools.stop_right = true;
-//                
-//                if(my_rover.ticks.rotate_tick_left == 0)
-//                    my_rover.bools.stop_left = true;
-//                
-//                if(my_rover.bools.stop_left && my_rover.bools.stop_right)
-//                {
-//                    pwm.wanted_speed_right = 0;
-//                    pwm.wanted_speed_left = 0;
-//                    my_rover.bools.stop_right = false;
-//                    my_rover.bools.stop_left = false;
-//                    my_rover.bools.straight = false;
-//                    my_rover.rover_state = ROVER_RAMP;
-//                }
-//                interrupt_add_pwm(&pwm);
-//            }break;
             //***********************************
             //TODO: Move this all into a function + create the move block functions
             //***********************************
@@ -1001,13 +949,13 @@ void PROCESSING_Tasks() {
             {
                 pwm.wanted_speed_right = 2e-1;
                 pwm.wanted_speed_left = 2e-1;
-                if((my_rover.ticks.tick_right) >= 30)
+                if((my_rover.ticks.tick_right) >= 32)
                 {                 
                     my_rover.ticks.tick_right = 0;
                     my_rover.bools.stop_right = true;
                 }
                 //original was TEN_CM(1)
-                if((my_rover.ticks.tick_left)>= 30)
+                if((my_rover.ticks.tick_left)>= 32)
                 {
                     my_rover.ticks.tick_left= 0;
                     my_rover.bools.stop_left = true;
@@ -1040,7 +988,7 @@ void PROCESSING_Tasks() {
                         home = false;
                         go_home = false;
                         target_index++;
-                        map_init();
+                        init_world_diff();
                         if(target_index < target_size)
                         {
                             my_rover.rover_state = ROVER_WAIT_DROPPED;
@@ -1261,7 +1209,8 @@ void PROCESSING_Tasks() {
             {
                 pwm.wanted_speed_right = 1.2e-1;
                 pwm.wanted_speed_left = 1.2e-1;
-                move_wheels(0,1);
+                
+                move_wheels(1,0);
                 if(my_rover.bools.moved_right)
                     move_wheels(0,1);
 
@@ -1307,7 +1256,7 @@ void PROCESSING_Tasks() {
             {
                 my_rover.ticks.tick_left= 0;
                 my_rover.ticks.tick_right= 0;
-                map_init();
+                init_world_diff();
                 find_path(go_home);
                 path_point = my_path(target_index);
                 int16_t x = path_point/OFFSET - my_rover.xy_points.x;
