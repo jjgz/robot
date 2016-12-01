@@ -154,6 +154,35 @@ void PROCESSING_Tasks() {
                                  }
                              }
                          }
+                         unsigned occupied_points = world_retrieve_occupied_points(&points);
+                         for (i = 0; i < occupied_points; i++) {
+                             for (x = -1; x <= 1; x++) {
+                                 for (y = -1; y <= 1; y++) {
+                                     float xf = points[i].p.x + x * 5.0 / 128.0;
+                                     float yf = points[i].p.y + y * 5.0 / 128.0;
+                                     grid[(unsigned)(clampf(xf, 0.0, 4.9999) * 128.0 / 5.0) + (unsigned)(clampf(yf, 0.0, 4.9999) * 128.0 / 5.0) * 128] = 98;
+                                 }
+                             }
+                         }
+                         AbsolutePoint *bps;
+                         unsigned border_points = world_retrieve_arena_border_points(&bps);
+                         for (i = 0; i < border_points; i++) {
+                             AbsolutePoint *bpa = &bps[i];
+                             AbsolutePoint *bpb = &bps[(i + 1) % border_points];
+                             unsigned j;
+                             for (j = 0; j <= 100; j++) {
+                                 AbsolutePoint inter;
+                                 inter.x = bpa->x + j / 100.0 * (bpb->x - bpa->x);
+                                 inter.y = bpa->y + j / 100.0 * (bpb->y - bpa->y);
+                                for (x = -1; x <= 1; x++) {
+                                    for (y = -1; y <= 1; y++) {
+                                        float xf = inter.x + x * 5.0 / 128.0;
+                                        float yf = inter.y + y * 5.0 / 128.0;
+                                        grid[(unsigned)(clampf(xf, 0.0, 4.9999) * 128.0 / 5.0) + (unsigned)(clampf(yf, 0.0, 4.9999) * 128.0 / 5.0) * 128] = 98;
+                                    }
+                                }
+                             }
+                         }
                          send_message.type = NS_DEBUG_GEORDON_STR;
                         send_message.data.dbstr = "Got build";
                         network_send_add_message(&send_message);

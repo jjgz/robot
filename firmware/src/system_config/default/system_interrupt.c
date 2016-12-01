@@ -65,6 +65,9 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "int_adc.h"
 #include "system_definitions.h"
 #include "framework/driver/adc/drv_adc_static.h"
+#include "network/send.h"
+
+NSMessage req_movement_msg;
 
 // *****************************************************************************
 // *****************************************************************************
@@ -80,13 +83,11 @@ void IntHandlerDrvAdc(void)
     /* Clear ADC Interrupt Flag */
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_ADC_1);
 }
-
-
-
-
     
 void IntHandlerDrvTmrInstance0(void)
 {
+    req_movement_msg.type = NS_REQ_MOVEMENT;
+    network_send_add_message_isr(&req_movement_msg);
     PLIB_ADC_SampleAutoStartEnable(ADC_ID_1);
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);
 }
