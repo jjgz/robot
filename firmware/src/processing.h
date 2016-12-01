@@ -41,7 +41,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "network/recv.h"
 #define MY_NAME "Joe Gdaniec"
-#define PROCESSING_QUEUE_LEN 10
+#define PROCESSING_QUEUE_LEN 5
 // DOM-IGNORE-BEGIN
 #ifdef __cplusplus  // Provide C++ Compatibility
 
@@ -54,46 +54,50 @@ typedef enum {
     PR_NR,
     PR_PWM,
     PR_TMR,
+    PR_8C,
     //PR_DEBUG,
 } PRType;
 
 typedef enum {
     LEADER_INIT,
+            LEADER_RUP_M,
+            LEADER_RDWN_M,
             LEADER_MOVE,
             LEADER_WAIT,
+            LEADER_RUP_T,
+            LEADER_RDWN_T,
             LEADER_TURN,
             LEADER_STOP,
             LEADER_TURN_STOP,
             LEADER_BORDER,
             LEADER_BACK,
+            LEADER_STALL,
 }LStates;
 
 typedef enum {
-    RIGHT_FIRST,
-    LEFT_FIRST,
-    BACK_UP,
-    FORWARD,
-    FINISHED,
-    BORDER_WAIT,
+    B_INIT,
+            B_BWAIT,
+            B_FWAIT,
+            B_TWAIT,
+            B_AWAIT,
+            B_BSTOP,
+            B_TSTOP,
+            B_FSTOP,
+            B_ASTOP,
+            B_RIGHT,
+            B_LEFT,
+            B_BACK,
+            B_FORWARD,
+            B_AL,
+            B_AR,
+            B_EDGE,
+            B_ALIGNED,
 }BStates;
 typedef union {
-<<<<<<< HEAD
-<<<<<<< HEAD
     NRMessage nr_message;    
     TimerJGDebug timer;   
-=======
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-    NRMessage nr_message;
-    unsigned adc_sample;
-    TimerDebug timer;
-    bool left_mvmnt;
-    bool right_mvmnt;
-<<<<<<< HEAD
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
     MSGDebugJoeTread debug_joe_tread;
+    bool senseArray[8];
 } PRUnion;
 
 typedef struct{
@@ -117,6 +121,13 @@ typedef struct{
     double dist_thresh;
     double border_thresh;
 }thresh;
+
+typedef enum{
+    CHARGE,
+    INPUT,
+    READ,
+}SStates;
+
 typedef struct {
     pwm_ticks ticks;
     LStates lead_state;
@@ -125,36 +136,22 @@ typedef struct {
     bool stop_right;
     bool slow_left;
     bool slow_right;
-<<<<<<< HEAD
-<<<<<<< HEAD
     thresh thresholds;
     bool got_cmnd;
     ldr_move ldr_m;
+    SStates sense_state;
+    SStates nextSense;
     SensorReading sensors;
+    bool senseArray[8];
     
-=======
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-    //uint32_t time_r;
-    //uint32_t time_l;
-    //uint32_t last_rmotor;
-    //uint32_t last_lmotor;
-<<<<<<< HEAD
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
 }leader;
+
 void processing_add_recvmsg(NRMessage *message);
 void interrupt_add_pwm(pwm_to_isr *pwm);
 void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
-<<<<<<< HEAD
-<<<<<<< HEAD
 void processing_change_rover_state(uint32_t timer_state);
 void leader_state_change(double ultrasonic, double left_photo, double right_photo, double prev_left, double prev_right, double dist_thresh, double border_thresh);
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
+void processing_add_8c_reading( bool boolArray[8]);
 void enable_start();
 void leader_move(unsigned right, unsigned left);
 void PROCESSING_Initialize();

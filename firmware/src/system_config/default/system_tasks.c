@@ -57,6 +57,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "network_send.h"
 #include "network_recv.h"
 #include "processing.h"
+#include "timers.h"
 
 
 // *****************************************************************************
@@ -71,8 +72,7 @@ static void _SYS_Tasks ( void );
 static void _NETWORK_SEND_Tasks(void);
 static void _NETWORK_RECV_Tasks(void);
 static void _PROCESSING_Tasks(void);
-
-
+int tmr_cnt;
 // *****************************************************************************
 // *****************************************************************************
 // Section: System "Tasks" Routine
@@ -88,7 +88,7 @@ static void _PROCESSING_Tasks(void);
 */
 
 void SYS_Tasks ( void )
-{
+{    
     /* Create OS Thread for Sys Tasks. */
     xTaskCreate((TaskFunction_t) _SYS_Tasks,
                 "Sys Tasks",

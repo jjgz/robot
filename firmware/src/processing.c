@@ -28,22 +28,28 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "debug.h"
 #include "pid/pid.h"
 #include "peripheral/oc/plib_oc.h"
+#include "timers.h"
+#include <math.h>
 
-#define TEN_CM(a) (60*a)
-#define ROTATE(a) (52*a)
+#define TEN_CM(a) (650*a)
+#define ROTATE(a) (625*a)
+#define PI 3.14159265
+
+TimerHandle_t sensorTimer;
+BaseType_t sensorStart = 1;
+
 extern Pid pid_right;
 extern Pid pid_left;
+//int tmr_cnt;
 QueueHandle_t processing_queue;
 extern QueueHandle_t interrupt_queue;
 leader rover;
-int processing_counter;
+uint32_t processing_counter;
 extern double target_right_spd;
 extern double target_left_spd;
 unsigned output_left_avg;
 unsigned output_right_avg;
-<<<<<<< HEAD
 
-<<<<<<< HEAD
 void rover_init(){
     rover.ticks.prev_left = 0;
     rover.ticks.prev_right = 0;
@@ -54,16 +60,30 @@ void rover_init(){
     rover.slow_left = false;
     rover.stop_right = false;
     rover.got_cmnd = false;
+    rover.ldr_m.dist_x = 0;
+    rover.ldr_m.dist_y = 0;
+    rover.ldr_m.turn_angle = 0;
+    rover.ldr_m.angle_var = 0;
+    rover.ldr_m.move_var = 0;
+    rover.sensors.ultra = 0;
+    rover.sensors.l_photo =0;
+    rover.sensors.r_photo = 0;
+    rover.sensors.prev_lphoto = 0;
+    rover.sensors.prev_rphoto = 0;
+    rover.thresholds.dist_thresh = 3.0;
+    rover.thresholds.border_thresh = 50.0;
+    rover.lead_state = LEADER_MOVE;
+    rover.sense_state = CHARGE;
+    rover.nextSense = CHARGE;
+    rover.senseArray[0] = 0;
+    rover.senseArray[1] = 0;
+    rover.senseArray[2] = 0;
+    rover.senseArray[3] = 0;
+    rover.senseArray[4] = 0;
+    rover.senseArray[5] = 0;
+    rover.senseArray[6] = 0;
+    rover.senseArray[7] = 0;
 }
-=======
-bool map[128][128];
-
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-=======
-
-bool map[128][128];
-
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
 void enable_start(){
     pid_start(&pid_right);
     pid_start(&pid_left);
@@ -76,21 +96,14 @@ void enable_start(){
     DRV_OC1_Enable();
     DRV_OC0_Start();
     DRV_OC1_Start();
-    rover.ticks.prev_left = 0;
-    rover.ticks.prev_right = 0;
-    rover.ticks.t_left = 0;
-    rover.ticks.t_right = 0;
-    rover.stop_left = false;
-    rover.slow_right = false;
-    rover.slow_left = false;
-    rover.stop_right - false;
-    //rover.last_rmotor = 0;
-    //rover.time_l = 0;
-    //rover.time_r = 0;
+    rover_init();
+    processing_counter = 0;
+    output_left_avg = 0;
+    output_right_avg = 0;
     target_right_spd = 2e-5;
     target_left_spd = 2e-5;
 }
-
+ 
 void processing_add_recvmsg(NRMessage *message) {
     PRMessage pr_message;
     pr_message.type = PR_NR;
@@ -98,23 +111,26 @@ void processing_add_recvmsg(NRMessage *message) {
     xQueueSendToBack(processing_queue, &pr_message, portMAX_DELAY);
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-/*void processing_change_rover_state(uint32_t timer_state){
-    PRMessage pr_pwm_message;
-    pr_pwm_message.type = PR_TMR;
-    pr_pwm_message.data.timer.tmr_state = timer_state;
-    BaseType_t higher_priority_task_woken = pdFALSE;
-    if (xQueueSendToBackFromISR(processing_queue, &pr_pwm_message, &higher_priority_task_woken)) {
-                portEND_SWITCHING_ISR(higher_priority_task_woken);
-            }   
-            else {
-                SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-            }
-}*/
+void processing_add_8c_reading( bool boolArray[8]){
+    PRMessage pr_message;
+    pr_message.type = PR_8C;
+    int i;
+    for(i = 0; i < 8; i ++)
+    {
+        pr_message.data.senseArray[i] = boolArray[i];
+    }
+    /*BaseType_t higher_priority_task_woken = pdFALSE;
+    if (xQueueSendToBack(processing_queue, &pr_pwm_message, &higher_priority_task_woken)) {
+        portEND_SWITCHING_ISR(higher_priority_task_woken);
+    }
+    else {
+        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
+    }*/
+    xQueueSendToBack(processing_queue, &pr_message, portMAX_DELAY);
+}
 
 void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4){
-    if(rover.got_cmnd)    {
+    if(rover.got_cmnd) {
         output_right_avg += right_pwm;
         output_left_avg += left_pwm;
         rover.ticks.t_left += tmr4;
@@ -141,84 +157,42 @@ void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t 
             }
         }
     }
-=======
-void processing_add_adc_reading(unsigned adc_sample){
-    PRMessage pr_adc_message;
-    pr_adc_message.type = PR_ADC;
-    pr_adc_message.data.adc_sample = adc_sample;
-    
-    BaseType_t higher_priority_task_woken = pdFALSE;
-    // Attempt add the buffer from the isr to the queue.
-    if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
-        // If a higher priority task was waiting for something on the queue, switch to it.
-        portEND_SWITCHING_ISR(higher_priority_task_woken);
-    // We didn't receive a buffer.
-    } else {
-        // Indicate on LD4 that we lost a packet.
-        // NOTE: LD4 conflicts with SDA2 (I2C).
-        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-    }
-}
-
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4){
-=======
-void processing_add_adc_reading(unsigned adc_sample){
-    PRMessage pr_adc_message;
-    pr_adc_message.type = PR_ADC;
-    pr_adc_message.data.adc_sample = adc_sample;
-    
-    BaseType_t higher_priority_task_woken = pdFALSE;
-    // Attempt add the buffer from the isr to the queue.
-    if (xQueueSendToBackFromISR(processing_queue, &pr_adc_message, &higher_priority_task_woken)) {
-        // If a higher priority task was waiting for something on the queue, switch to it.
-        portEND_SWITCHING_ISR(higher_priority_task_woken);
-    // We didn't receive a buffer.
-    } else {
-        // Indicate on LD4 that we lost a packet.
-        // NOTE: LD4 conflicts with SDA2 (I2C).
-        SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-    }
-}
-
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4){
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-    PRMessage pr_pwm_message;
-    
-    
-    output_right_avg += right_pwm;
-    output_left_avg += left_pwm;
-    rover.ticks.t_left += tmr4;
-    rover.ticks.t_right += tmr3;
-    
-    processing_counter++;
-    if(processing_counter == 50){
-        processing_counter = 0;
-        output_right_avg = pr_pwm_message.data.timer.right_spd_avg/50;
-        output_left_avg = pr_pwm_message.data.timer.left_spd_avg/50;
-        pr_pwm_message.type = PR_PWM;
-        pr_pwm_message.data.timer.r_spd = output_left_avg;
-        pr_pwm_message.data.timer.l_spd = output_right_avg;
-        pr_pwm_message.data.timer.tmr3 = tmr3;
-        pr_pwm_message.data.timer.tmr4 = tmr4;
-    
-        BaseType_t higher_priority_task_woken = pdFALSE;
-    
-        if (xQueueSendToBackFromISR(processing_queue, &pr_pwm_message, &higher_priority_task_woken)) {
-            portEND_SWITCHING_ISR(higher_priority_task_woken);
-        }   
-        else {
-            SYS_PORTS_PinWrite(0, PORT_CHANNEL_A, PORTS_BIT_POS_3, 1);
-        }         
-    }    
-<<<<<<< HEAD
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
 }
 void interrupt_add_pwm(pwm_to_isr * pwm){
     pwm_to_isr p_val = *pwm;
     xQueueSendToBack(interrupt_queue, &p_val, portMAX_DELAY);
 }
+/*void leader_state_change(double ultrasonic, double left_photo, double right_photo, double prev_left, double prev_right,double dist_thresh, double border_thresh){
+    if((ultrasonic <= dist_thresh)&&(!(left_photo >= border_thresh)) && (!(right_photo >= border_thresh))){
+        rover.lead_state = LEADER_TURN;
+    }
+    else if (!(ultrasonic <= dist_thresh)&&(left_photo >= border_thresh) && !(right_photo >= border_thresh)){
+        rover.lead_state = LEADER_BORDER;
+        if(!(prev_left >= border_thresh)&&(prev_right >= border_thresh)&&!(right_photo >= border_thresh)){
+            rover.border = BACK_UP;
+        }
+        else{
+            rover.border = LEFT_FIRST;
+        }
+    }
+    else if (!(ultrasonic <= dist_thresh)&&!(left_photo >= border_thresh) && (right_photo >= border_thresh)){
+        rover.lead_state = LEADER_BORDER;
+        if((prev_left >= border_thresh)&&!(prev_right >= border_thresh)&&!(left_photo >= border_thresh)){
+            rover.border = BACK_UP;
+        }
+        else{
+            rover.border = RIGHT_FIRST;
+        }
+    }
+    else if (!(ultrasonic <= dist_thresh)&&(left_photo >= border_thresh) &&(right_photo >= border_thresh)){
+        rover.border = FINISHED;
+        rover.lead_state = LEADER_STOP;
+    }
+    else if ((!(ultrasonic <= dist_thresh))&&(!(left_photo >= border_thresh)) && (!(right_photo >= border_thresh))){
+        rover.lead_state = LEADER_MOVE;
+    }
+    
+}*/
 
 void leader_move(unsigned right, unsigned left){
     SYS_PORTS_PinWrite(0,PORT_CHANNEL_D, PORTS_BIT_POS_1,1);
@@ -227,20 +201,33 @@ void leader_move(unsigned right, unsigned left){
     SYS_PORTS_PinWrite(0,PORT_CHANNEL_G, PORTS_BIT_POS_1, left);
 }
 
-void PROCESSING_Initialize() {
-    enable_start();
-    processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(PRMessage));
-    interrupt_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(pwm_to_isr));
-    
+void senseTimerCallback(TimerHandle_t xTimer){
+    //tmr_cnt++;
+    //vTimerSetTimerID( xTimer, ( void * ) tmr_cnt );
+    rover.sense_state = rover.nextSense;
 }
 
-void PROCESSING_Tasks() {
+void PROCESSING_Initialize() {   
+    sensorTimer = xTimerCreate("Timer",pdMS_TO_TICKS(2),pdTRUE, (void *) 0, senseTimerCallback);
+    sensorStart = xTimerStart(sensorTimer,0);    
+    processing_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(PRMessage));
+    interrupt_queue = xQueueCreate(PROCESSING_QUEUE_LEN, sizeof(pwm_to_isr));
+    enable_start();   
+}
+
+void PROCESSING_Tasks() {    
     PRMessage recv_message;
     NSMessage send_message;
     pwm_to_isr pwm;
     int counter = 0;
+    double val = PI/180;
+    int turn_counter = 0;
+    double x_tot = 0;
+    double y_tot  = 0;
+    double angle_tot = 0;
     double prev_left_photo = 0;
     double prev_right_photo = 0;
+    bool prevSensor[8] = {0};
     bool left;
     bool right;
     NSMessage netstats_message;
@@ -252,20 +239,13 @@ void PROCESSING_Tasks() {
     netstats->numJSONResponsesRecved = 0;
     netstats->numJSONRequestsSent = 0;
     netstats->numJSONResponsesSent = 0;
-    //leader_move(0,0);
     
-    
-    //rover.lead_state = LEADER_MOVE;
-    
-    //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_14, 1);
-    //SYS_PORTS_PinWrite(0, PORT_CHANNEL_G, PORTS_BIT_POS_1, 1);
-    
+    //DebugState debug_s = DEBUGS_NOTHING;
     network_send_add_message(&netstats_message);
 
     while (1) {
         // We responded to a request, so we increase the responses sent.
-        xQueueReceive(processing_queue, &recv_message, portMAX_DELAY);
-        //recv_message.type = PR_DEBUG;
+        xQueueReceive(processing_queue, &recv_message, portMAX_DELAY);        
         switch (recv_message.type) {
             case PR_NR:{
                 NRMessage *nr_message = &recv_message.data.nr_message;
@@ -292,18 +272,18 @@ void PROCESSING_Tasks() {
                         //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
                         
                     } break;
-                     /*case NR_REQ_MOVEMENT:
+                     case NR_REQ_MOVEMENT:
                      {
-                         /*send_message.type = NS_MOVEMENT;
-                         send_message.data.ldr_m.dist_x = rover.ldr_m.dist_x;
-                         send_message.data.ldr_m.dist_y = rover.ldr_m.dist_y;
-                         send_message.data.ldr_m.turn_angle = rover.ldr_m.turn_angle;
-                         send_message.data.ldr_m.angle_var = rover.ldr_m.angle_var;
-                         send_message.data.ldr_m.move_var = rover.ldr_m.move_var;
+                         send_message.type = NS_MOVEMENT;
+                         send_message.data.movement.x = rover.ldr_m.dist_x;
+                         send_message.data.movement.y = rover.ldr_m.dist_y;
+                         send_message.data.movement.angle = rover.ldr_m.turn_angle;
+                         send_message.data.movement.av = rover.ldr_m.angle_var;
+                         send_message.data.movement.v = rover.ldr_m.move_var;
                          network_send_add_message(&send_message);
                          
-                     }break;*/
-                     /*case NR_SENSORS:
+                     }break;
+                     case NR_SENSORS:
                      {
                         /*send_message.type = NS_MOVEMENT;
                         send_message.data.ldr_m.dist_x = rover.ldr_m.dist_x;
@@ -311,11 +291,15 @@ void PROCESSING_Tasks() {
                         send_message.data.ldr_m.turn_angle = rover.ldr_m.turn_angle;
                         send_message.data.ldr_m.angle_var = rover.ldr_m.angle_var;
                         send_message.data.ldr_m.move_var = rover.ldr_m.move_var;
-                        network_send_add_message(&send_message);
-                        rover_init();
-                        double ul = 3.0;
-                        double lp = 30.0;
-                        double rp = 30.0;
+                        network_send_add_message(&send_message);*/
+                        /*turn_counter++;
+                        rover.sensors.ultra = 2.5;
+                        if(turn_counter >= 3)
+                        {
+                            rover.sensors.ultra = 5.0;
+                            turn_counter = 0;
+                        }*/
+                        rover_init();                        
                         rover.lead_state = LEADER_INIT;
                         rover.sensors.prev_lphoto = prev_left_photo;
                         rover.sensors.prev_rphoto = prev_right_photo;
@@ -325,11 +309,9 @@ void PROCESSING_Tasks() {
                         //leader_state_change(ul, lp, rp,rover.sensors.prev_lphoto, rover.sensors.prev_rphoto, rover.thresholds.dist_thresh, rover.thresholds.border_thresh);
                         //leader_state_change(rover.sensors.ultra, rover.sensors.l_photo, rover.sensors.r_photo,rover.sensors.prev_lphoto, rover.sensors.prev_rphoto, rover.thresholds.dist_thresh, rover.thresholds.border_thresh);
                         rover.got_cmnd = true;
-                     }break;*/
+                     }break;
                     case NR_DEBUG_JOE_TREAD:
                     {
-<<<<<<< HEAD
-<<<<<<< HEAD
                         //left = nr_message->data.debug_joe_tread.left;
                         //right = nr_message->data.debug_joe_tread.right;
                         /*rover_init();
@@ -340,266 +322,43 @@ void PROCESSING_Tasks() {
                         rover.ticks.t_right = 0;
                         rover.ticks.t_left = 0;
                         interrupt_add_pwm(&pwm);*/
-=======
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-                        left = nr_message->data.debug_joe_tread.left;
-                        right = nr_message->data.debug_joe_tread.right;
-                        rover.lead_state = LEADER_INIT;
-                        switch(rover.lead_state){
-                            case(LEADER_INIT):
-                            {
-                                if(counter == 0){
-                                    rover.ticks.t_right = 0;
-                                    rover.ticks.t_left = 0;
-                                    pwm.target_left_spd = 2e-1;
-                                    pwm.target_right_spd = 2e-1;
-                                } 
-                                if((left == 0) && (right == 0)){
-                                    rover.lead_state = LEADER_MOVE;
-                                    leader_move(0,0);
-                                }
-                                if((left == 1) && (right == 0)){
-                                    leader_move(1,0);
-                                    rover.lead_state = LEADER_LEFT;
-                                }
-                                if((left == 0) && (right == 1)){
-                                    leader_move(0,1);
-                                    rover.lead_state = LEADER_RIGHT;
-                                }
-                                if((left == 1) && (right== 01)){
-                                    leader_move(1,1);
-                                    rover.lead_state = LEADER_BACK;
-                                }
-                                counter++;
-                                interrupt_add_pwm(&pwm);
-                            }break;
-                            case(LEADER_MOVE):
-                            {
-                                rover.ticks.t_right = 0;
-                                rover.ticks.t_left = 0;
-                                pwm.target_left_spd = 2e-1;
-                                pwm.target_right_spd = 2e-1;
-                                interrupt_add_pwm(&pwm);
-                                rover.lead_state = LEADER_WAIT;
-                            }break;
-                            case(LEADER_BACK):
-                            {
-                                rover.ticks.t_right = 0;
-                                rover.ticks.t_left = 0;
-                                pwm.target_left_spd = -(2e-1);
-                                pwm.target_right_spd = -(2e-1);
-                                interrupt_add_pwm(&pwm);
-                                rover.lead_state = LEADER_WAIT;
-                            }
-                            case(LEADER_LEFT):
-                            {
-                                leader_move(0,1);
-                                pwm.target_left_spd = -(2e-1);
-                                pwm.target_right_spd = (2e-1);
-                                if(rover.ticks.t_right == ROTATE(2))
-                                {
-                                    rover.ticks.t_right = 0;
-                                    rover.stop_right = true;
-                                }
-                                if(rover.ticks.t_left == ROTATE(2))
-                                {       
-                                    rover.ticks.t_left = 0;
-                                    rover.stop_left = true;
-                                }
-                                if(rover.stop_left && rover.stop_right)
-                                {
-                                    rover.lead_state = LEADER_STOP;
-                                    pwm.target_left_spd = 0;
-                                    pwm.target_right_spd = 0;
-                                }
-                                interrupt_add_pwm(&pwm);
-                            }break;
-                            case(LEADER_RIGHT):
-                            {
-                                leader_move(1,0);
-                                pwm.target_left_spd = (2e-1);
-                                pwm.target_right_spd = -(2e-1);
-                                if(rover.ticks.t_right == ROTATE(2))
-                                {
-                                    rover.ticks.t_right = 0;
-                                    rover.stop_right = true;
-                                }
-                                if(rover.ticks.t_left == ROTATE(2))
-                                {       
-                                    rover.ticks.t_left = 0;
-                                    rover.stop_left = true;
-                                }
-                                if(rover.stop_left && rover.stop_right)
-                                {
-                                    rover.lead_state = LEADER_STOP;
-                                    pwm.target_left_spd = 0;
-                                    pwm.target_right_spd = 0;
-                                }
-                                interrupt_add_pwm(&pwm);
-                            }break;
-                            case(LEADER_WAIT):
-                            {               
-                                if(rover.ticks.t_right == TEN_CM(2))
-                                {
-                                    rover.ticks.t_right = 0;
-                                    rover.stop_right = true;
-                                }
-                                if(rover.ticks.t_left == TEN_CM(2))
-                                {
-                                    rover.ticks.t_left = 0;
-                                    rover.stop_left = true;
-                                }
-                                if(rover.stop_left && rover.stop_right)
-                                {
-                                    rover.lead_state = LEADER_STOP;
-                                    pwm.target_left_spd = 0;
-                                    pwm.target_right_spd = 0;
-                                }
-                                interrupt_add_pwm(&pwm);
-                            }break;
-                            case(LEADER_STOP):
-                            {
-                                pwm.target_left_spd = 0;
-                                pwm.target_right_spd = 0;
-                                interrupt_add_pwm(&pwm);
-                            }break;
-                        }
-                        //send_message.data.tmr.l_spd = left;
-                        //send_message.data.tmr.r_spd = right;
-                        //send_message.type = NS_DEBUG_OC;
-                        //network_send_add_message(&send_message);
-                        //left = 0;
-                        //right = 0;
-                        //rover.ticks.t_right = 0;
-                        //rover.ticks.t_left = 0;
-<<<<<<< HEAD
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
                         //pwm.target_left_spd = 2e-1;
                         //pwm.target_right_spd = 2e-1;
                         //interrupt_add_pwm(&pwm);
-                        //leader_move(1,1);
-                        //pwm.target_left_spd = 2e-1;
-                        //pwm.target_right_spd = 2e-1;
-                        //interrupt_add_pwm(&pwm);              
-                        /*if((left == 0) &&(right == 0))
-                        {
-                            pwm.target_left_spd = 2e-1;
-                            pwm.target_right_spd = 2e-1;
-                            leader_move(0,0);
-                            if()
-                            {
-                                rover.ticks.t_right = 0;
-                                rover.stop_right = true;
-                            }
-                            if(rover.ticks.t_left == TEN_CM(2))
-                            {
-                                rover.ticks.t_left = 0;
-                                rover.stop_left = true;
-                            }
-                            interrupt_add_pwm(&pwm);
+                        /*if((left == 0) && (right == 0)){
+                        debug_s = DEBUGS_MOVE;
+                        //leader_move(0,0);
                         }
-                        else if((left == 1)&&(right == 1))
-                        {
-                            pwm.target_left_spd = -(2e-1);
-                            pwm.target_right_spd = -(2e-1);
-                            if(rover.ticks.t_right == TEN_CM(2))
-                            {
-                                rover.ticks.t_right = 0;
-                                rover.stop_right = true;
-                            }
-                            if(rover.ticks.t_left == TEN_CM(2))
-                            {
-                                rover.ticks.t_left = 0;
-                                rover.stop_left = true;
-                            }
-                            SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);                            
-                            interrupt_add_pwm(&pwm);
+                        if((left == 1) && (right == 0)){
+                            //leader_move(1,0);
+                            debug_s = DEBUGS_TURNL;
                         }
-                        else if((left == 0)&&(right == 1))
-                        {
-                            leader_move(0,1);
-                            if(rover.ticks.t_right == ROTATE(2))
-                            {
-                                rover.ticks.t_right = 0;
-                                rover.stop_right = true;
-                            }
-                            if(rover.ticks.t_left == ROTATE(2))
-                            {       
-                                rover.ticks.t_left = 0;
-                                rover.stop_left = true;
-                            }
-                            interrupt_add_pwm(&pwm);
+                        if((left == 0) && (right == 1)){
+                            //leader_move(0,1);
+                            debug_s = DEBUGS_TURNR;
                         }
-                        else if((left == 1) && (right == 0))
-                        {
-                            leader_move(1,0);
-                            if(rover.ticks.t_right == ROTATE(2))
-                            {
-                                rover.ticks.t_right = 0;
-                                rover.stop_right = true;
-                            }
-                            if(rover.ticks.t_left == ROTATE(2))
-                            {
-                                rover.ticks.t_left = 0;
-                                rover.stop_left = true;
-                            }    
-                            interrupt_add_pwm(&pwm);
-                        }
-                        else if(rover.stop_left && rover.stop_right)
-                        {
-                            pwm.target_left_spd = 0;
-                            pwm.target_right_spd = 0;
-                            interrupt_add_pwm(&pwm);
+                        if((left == 1) && (right== 01)){
+                            //leader_move(1,1);
+                            debug_s = DEBUGS_BACK;
                         }*/
                     }break;
-<<<<<<< HEAD
                      
-=======
-                     case NR_JE:
-                     {
-                         /*int tmp_x = nr_message->data.point.x;
-                         int tmp_y = nr_message->data.point.y;
-                         int i;
-                         int j;
-                         for(i = 0; i <= tmp_x;i++){
-                             if(i == tmp_x){
-                                 for(j=0; j <= tmp_y;j++){
-                                     if(j == tmp_y){
-                                         map[i][j]=0;
-                                     }
-                                 }
-                             }
-                         }*/
-                     } break;
-                     case NR_JF:
-                     {
-                         /*int tmp_r = nr_message->data.point.x;
-                         int tmp_c = nr_message->data.point.y;
-                         int i;
-                         int j;
-                         for(i = 0; i <= tmp_r;i++){
-                             if(i == tmp_r){
-                                 for(j=0; j <= tmp_c;j++){
-                                     if(j == tmp_c){
-                                         map[i][j]=0;
-                                     }
-                                 }
-                             }
-                         }*/
-                     } break;
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
                     default:
                         break;
                 }       
             } break;
+            case PR_8C:
+            {
+                int j;
+                for(j = 0; j < 8; j++)
+                {                
+                    rover.senseArray[j] = recv_message.data.senseArray[j];
+                }
+                rover.lead_state = LEADER_INIT;
+            }
             case PR_PWM:
-<<<<<<< HEAD
-<<<<<<< HEAD
             { 
-                
+                //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
                 send_message.type = NS_DEBUG_OC;               
                 send_message.data.tm3r.l_spd = recv_message.data.timer.l_spd;
                 send_message.data.tm3r.r_spd = recv_message.data.timer.r_spd;
@@ -607,63 +366,99 @@ void PROCESSING_Tasks() {
                 send_message.data.tm3r.tmr4 = recv_message.data.timer.tmr4;
                 //send_message.data.tmr.r_spd = processing_counter;
                 network_send_add_message(&send_message);
-=======
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-            {
-                // PLIB_OC_PulseWidth16BitSet(OC_ID_1, recv_message.data.timer.tmr3);
-                //PLIB_OC_PulseWidth16BitSet(OC_ID_2, recv_message.data.timer.tmr4);
-                send_message.type = NS_DEBUG_OC;
-                //rover.ticks.t_left += recv_message.data.timer.tmr4;
-                //rover.ticks.t_right += recv_message.data.timer.tmr3;
-                
-                send_message.data.tmr.l_spd = recv_message.data.timer.l_spd;
-                send_message.data.tmr.r_spd = recv_message.data.timer.r_spd;
-<<<<<<< HEAD
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
                 //send_message.data.tmr.l_spd = 100.50;
                 //send_message.data.tmr.r_spd = 100.50;
-                send_message.data.tmr.tmr3 = rover.ticks.t_right;
-                send_message.data.tmr.tmr3 = rover.ticks.t_left;
-                network_send_add_message(&send_message);
+                //send_message.data.tmr.tmr3 = rover.ticks.t_right;
+                //send_message.data.tmr.tmr3 = rover.ticks.t_left;
+                
                 
             } break;
             case PR_TMR:
             {
-<<<<<<< HEAD
-<<<<<<< HEAD
                 
             } break;            
             default:
                 break;               
         }
+        
+        switch(rover.sense_state){
+            bool tempArray[8];
+            
+            case CHARGE:
+            {
+                
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_OUTPUT, PORT_CHANNEL_E, PORTS_BIT_POS_7 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_OUTPUT, PORT_CHANNEL_E, PORTS_BIT_POS_6 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_OUTPUT, PORT_CHANNEL_E, PORTS_BIT_POS_5 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_OUTPUT, PORT_CHANNEL_E, PORTS_BIT_POS_4 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_OUTPUT, PORT_CHANNEL_E, PORTS_BIT_POS_3 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_OUTPUT, PORT_CHANNEL_E, PORTS_BIT_POS_2 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_OUTPUT, PORT_CHANNEL_E, PORTS_BIT_POS_1 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_OUTPUT, PORT_CHANNEL_E, PORTS_BIT_POS_0 );
+                
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_7, 1 );
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_6, 1 );
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_5, 1 );
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_4, 1 );
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_3, 1 );
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_2, 1 );
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_1, 1 );
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_E, PORTS_BIT_POS_0, 1 );
+                
+                rover.nextSense = INPUT;
+            }break;
+            case INPUT:
+            {
+                SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_INPUT, PORT_CHANNEL_E, PORTS_BIT_POS_7 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_INPUT, PORT_CHANNEL_E, PORTS_BIT_POS_6 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_INPUT, PORT_CHANNEL_E, PORTS_BIT_POS_5 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_INPUT, PORT_CHANNEL_E, PORTS_BIT_POS_4 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_INPUT, PORT_CHANNEL_E, PORTS_BIT_POS_3 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_INPUT, PORT_CHANNEL_E, PORTS_BIT_POS_2 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_INPUT, PORT_CHANNEL_E, PORTS_BIT_POS_1 );
+                SYS_PORTS_PinDirectionSelect ( 0, SYS_PORTS_DIRECTION_INPUT, PORT_CHANNEL_E, PORTS_BIT_POS_0 );
+                
+                rover.nextSense = READ;
+                        
+            }break;
+            case READ:
+            {
+                
+                tempArray[0] = SYS_PORTS_PinRead(0, PORT_CHANNEL_E, PORTS_BIT_POS_7);
+                tempArray[1] = SYS_PORTS_PinRead(0, PORT_CHANNEL_E, PORTS_BIT_POS_6);
+                tempArray[2] = SYS_PORTS_PinRead(0, PORT_CHANNEL_E, PORTS_BIT_POS_5);
+                tempArray[3] = SYS_PORTS_PinRead(0, PORT_CHANNEL_E, PORTS_BIT_POS_4);
+                tempArray[4] = SYS_PORTS_PinRead(0, PORT_CHANNEL_E, PORTS_BIT_POS_3);
+                tempArray[5] = SYS_PORTS_PinRead(0, PORT_CHANNEL_E, PORTS_BIT_POS_2);
+                tempArray[6] = SYS_PORTS_PinRead(0, PORT_CHANNEL_E, PORTS_BIT_POS_1);
+                tempArray[7] = SYS_PORTS_PinRead(0, PORT_CHANNEL_E, PORTS_BIT_POS_0);
+                
+                processing_add_8c_reading(tempArray);
+                rover.nextSense = CHARGE;
+            }break;
+            default:
+                break;
+        }
         if(rover.got_cmnd){
             switch(rover.lead_state){
                 case(LEADER_INIT):
-                {
-                    
-                    //pwm.target_left_spd = 2e-1;
-                    //pwm.target_right_spd = 2e-1;
-                    /*if((left == 0) && (right == 0)){
+                {                    
+                    if(rover.sensors.ultra <= rover.thresholds.dist_thresh)
+                    {
+                        rover.lead_state = LEADER_TURN;
+                    }
+                    /*if(((rover.senseArray[0])&&(rover.senseArray[1])&&(rover.senseArray[2])&&(rover.senseArray[3])&&
+                            (rover.senseArray[4])&&(rover.senseArray[5])&&(rover.senseArray[6])&&(rover.senseArray[7])) == 0)
+                    {
+                        rover.lead_state = LEADER_BORDER;
+                        pwm.target_left_spd = 0;
+                        pwm.target_right_spd = 0;
+                        interrupt_add_pwm(&pwm);
+                    }*/
+                    else{
                         rover.lead_state = LEADER_MOVE;
-                        //leader_move(0,0);
                     }
-                    if((left == 1) && (right == 0)){
-                        //leader_move(1,0);
-                        rover.lead_state = LEADER_LEFT;
-                    }
-                    if((left == 0) && (right == 1)){
-                        //leader_move(0,1);
-                        rover.lead_state = LEADER_RIGHT;
-                    }
-                    if((left == 1) && (right== 01)){
-                        //leader_move(1,1);
-                        rover.lead_state = LEADER_BACK;
-                    }
-                    //counter++;
-                    //interrupt_add_pwm(&pwm);*/
                 }break;
                 case(LEADER_MOVE):
                 {
@@ -671,8 +466,32 @@ void PROCESSING_Tasks() {
                     pwm.target_left_spd = 3e-1;
                     pwm.target_right_spd = 3e-1;
                     interrupt_add_pwm(&pwm);
-                    rover.lead_state = LEADER_WAIT;
+                    //rover.lead_state = LEADER_WAIT;
                     //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
+                    if(rover.ticks.t_right >= (TEN_CM(1)/2))
+                    {
+                        rover.ticks.t_right = 0;
+                        rover.stop_right = true;
+                    }
+                    if(rover.ticks.t_left >= (TEN_CM(1)/2))
+                    {
+                        rover.ticks.t_left = 0;
+                        rover.stop_left = true;
+                    }
+                    
+                    if(rover.stop_left && rover.stop_right)
+                    {
+                        rover.lead_state = LEADER_STOP;                        
+                        pwm.target_left_spd = 0;
+                        pwm.target_right_spd = 0;
+                        interrupt_add_pwm(&pwm);                       
+                        rover.ldr_m.dist_x += 5.1*cos((90-angle_tot)*val);
+                        rover.ldr_m.dist_y += 5.1*sin((90-angle_tot)*val);
+                        rover.ldr_m.move_var = 0.4;
+                        x_tot += rover.ldr_m.dist_x;
+                        y_tot += rover.ldr_m.dist_y;
+                        //send_message.data.ldr_m.turn_angle = 24.0;
+                    }                    
                 }break;
                 case(LEADER_BACK):
                 {
@@ -685,130 +504,257 @@ void PROCESSING_Tasks() {
                 case(LEADER_TURN):
                 {
                     leader_move(0,1);
-                    pwm.target_left_spd = 3e-1;
-                    pwm.target_right_spd = 3e-1;
-                    rover.lead_state = LEADER_WAIT;
+                    pwm.target_left_spd = 1.5e-1;
+                    pwm.target_right_spd = 1.5e-1;
+                    //rover.lead_state = LEADER_WAIT;
                     interrupt_add_pwm(&pwm);
-                }break;
-                case(LEADER_WAIT):
-                {     
-                    if(rover.ticks.t_right >= TEN_CM(1))
+                    if(rover.ticks.t_right >= ROTATE(1)/12)
                     {
                         rover.ticks.t_right = 0;
                         rover.stop_right = true;
                     }
-                    if(rover.ticks.t_left >= TEN_CM(1))
-                    {
-                        rover.ticks.t_left = 0;
-                        rover.stop_left = true;
-                    }
-                    if(rover.ticks.t_right >= ROTATE(1))
-                    {
-                        rover.ticks.t_right = 0;
-                        rover.stop_right = true;
-                    }
-                    if(rover.ticks.t_left >= ROTATE(1))
+                    if(rover.ticks.t_left >= ROTATE(1)/12)
                     {       
                         rover.ticks.t_left = 0;
                         rover.stop_left = true;
+                    }
+                     if(rover.stop_left && rover.stop_right)
+                    {
+                        rover.lead_state = LEADER_STOP;                        
+                        pwm.target_left_spd = 0;
+                        pwm.target_right_spd = 0;
+                        interrupt_add_pwm(&pwm);
+                        rover.ldr_m.turn_angle += 13.5;
+                        rover.ldr_m.angle_var = 1.5*1.5;
+                        angle_tot += rover.ldr_m.turn_angle;
+                        //send_message.data.ldr_m.turn_angle = 24.0;
                     }   
+                }break;
+                case(LEADER_WAIT):
+                {     
+                    if(rover.ticks.t_right >= (TEN_CM(1)/2))
+                    {
+                        rover.ticks.t_right = 0;
+                        rover.stop_right = true;
+                    }
+                    if(rover.ticks.t_left >= (TEN_CM(1)/2))
+                    {
+                        rover.ticks.t_left = 0;
+                        rover.stop_left = true;
+                    }
+                    
                     if(rover.stop_left && rover.stop_right)
                     {
                         rover.lead_state = LEADER_STOP;                        
                         pwm.target_left_spd = 0;
                         pwm.target_right_spd = 0;
                         interrupt_add_pwm(&pwm);
+                        //send_message.data.ldr_m.turn_angle = 24.0;
                     }                    
                 }break;
                 /*case(LEADER_BORDER):
                 {
-                    /*switch(rover.border){
-                        case(RIGHT_FIRST):
+                    int k;
+                    for(k = 0; k < 4; k++)
+                    {
+                        if(rover.senseArray[k] == 0)
+                            left = 1;
+                        if(rover.senseArray[k+4] == 0)
+                            right = 1;
+                    }        
+                    rover.border = B_BACK;
+                    switch(rover.border)
+                    {
+                        case(B_BACK):
                         {
-                            leader_move(1,0);
-                            pwm.target_left_spd = 1.8e-1;
-                            pwm.target_right_spd = 1.8e-1;
-                            rover.border = BORDER_WAIT;
+                            leader_move(1,1); 
+                            pwm.target_left_spd = 1.5e-1;
+                            pwm.target_right_spd = 1.5e-1;
                             interrupt_add_pwm(&pwm);
+                            rover.border = B_BWAIT;                            
                         }break;
-                        case(LEFT_FIRST):
+                        case(B_FORWARD):
                         {
-                            leader_move(1,0);
-                            pwm.target_left_spd = 1.8e-1;
-                            pwm.target_right_spd = 1.8e-1;
-                            rover.border = BORDER_WAIT;
+                            leader_move(0,0); 
+                            pwm.target_left_spd = 1.5e-1;
+                            pwm.target_right_spd = 1.5e-1;
                             interrupt_add_pwm(&pwm);
-                            
+                            rover.border = B_FWAIT;
                         }break;
-                        case(BACK_UP):
+                        case(B_RIGHT):
                         {
-                            leader_move(1,1);
-                            pwm.target_left_spd = 1.8e-1;
-                            pwm.target_right_spd = 1.8e-1;
-                            rover.border = BORDER_WAIT;
+                            leader_move(1,0); 
+                            pwm.target_left_spd = 1.5e-1;
+                            pwm.target_right_spd = 1.5e-1;
                             interrupt_add_pwm(&pwm);
-                            
+                            rover.border = B_TWAIT;
                         }break;
-                        case(FORWARD):
+                        case(B_LEFT):
                         {
-                            leader_move(0,0);
-                            pwm.target_left_spd = 1.8e-1;
-                            pwm.target_right_spd = 1.8e-1;
-                            rover.border = BORDER_WAIT;
-                            interrupt_add_pwm(&pwm);                            
+                            leader_move(0,1); 
+                            pwm.target_left_spd = 1.5e-1;
+                            pwm.target_right_spd = 1.5e-1;
+                            interrupt_add_pwm(&pwm);
+                            rover.border = B_TWAIT;
                         }break;
-                        case(BORDER_WAIT):
+                        case(B_ALIGNED):
                         {
-                            if(rover.ticks.t_right >= TEN_CM(1))
+                            bool align;
+                            int c;
+                            for(c = 0; c < 8; c++)
+                            {
+                                if(rover.senseArray[c] == 0)
+                                {
+                                    align = 1;
+                                }
+                                else
+                                {
+                                    align = 0;
+                                }
+                            }
+                            if(align)
+                            {
+                                leader_move(0,1); 
+                                pwm.target_left_spd = 1.5e-1;
+                                pwm.target_right_spd = 1.5e-1;
+                                interrupt_add_pwm(&pwm);
+                                rover.border = B_AWAIT;
+                            }
+                            else
+                            {
+                                rover.border = B_BACK;
+                            }
+                        }break;
+                        case(B_AWAIT):
+                        {
+                            if(rover.ticks.t_right >= 2*ROTATE(1))
                             {
                                 rover.ticks.t_right = 0;
                                 rover.stop_right = true;
                             }
-                            if(rover.ticks.t_left >= TEN_CM(1))
-                            {
+                            if(rover.ticks.t_left >= 2*ROTATE(1))
+                            {  
                                 rover.ticks.t_left = 0;
                                 rover.stop_left = true;
                             }
+                            if(rover.stop_left && rover.stop_right)
+                            {
+                                rover.lead_state = B_ASTOP;                                
+                            }
+                        }break;
+                        case(B_TWAIT):
+                        {
                             if(rover.ticks.t_right >= ROTATE(1)/4)
                             {
                                 rover.ticks.t_right = 0;
                                 rover.stop_right = true;
                             }
                             if(rover.ticks.t_left >= ROTATE(1)/4)
-                            {       
+                            {  
                                 rover.ticks.t_left = 0;
                                 rover.stop_left = true;
-                            }   
+                            }
                             if(rover.stop_left && rover.stop_right)
                             {
-                                rover.lead_state = FINISHED;
+                                rover.lead_state = B_TSTOP;                                
                             }
+                        }break;                        
+                        case(B_BWAIT):
+                        {
+                            if(rover.ticks.t_right >= TEN_CM(1)/5)
+                            {
+                                rover.ticks.t_right = 0;
+                                rover.stop_right = true;
+                            }
+                            if(rover.ticks.t_left >= TEN_CM(1)/5)
+                            {
+                                rover.ticks.t_left = 0;
+                                rover.stop_left = true;
+                            }
+                            if(rover.stop_left && rover.stop_right)
+                            {
+                                rover.lead_state = B_BSTOP;                                
+                            }                      
                         }break;
-                        case(FINISHED):
+                        case(B_FWAIT):
+                        {
+                            if(rover.ticks.t_right >= TEN_CM(1)/5)
+                            {
+                                rover.ticks.t_right = 0;
+                                rover.stop_right = true;
+                            }
+                            if(rover.ticks.t_left >= TEN_CM(1)/5)
+                            {
+                                rover.ticks.t_left = 0;
+                                rover.stop_left = true;
+                            }
+                            if(rover.stop_left && rover.stop_right)
+                            {
+                                rover.lead_state = B_FSTOP;                                
+                            }                      
+                        }break;
+                        case(B_TSTOP):
                         {
                             pwm.target_left_spd = 0;
                             pwm.target_right_spd = 0;
                             interrupt_add_pwm(&pwm);
+                            rover.border = B_FORWARD;
+                        }break;
+                        case(B_ASTOP):
+                        {
+                            pwm.target_left_spd = 0;
+                            pwm.target_right_spd = 0;
+                            interrupt_add_pwm(&pwm);
+                            //rover.border = B_INIT;
                             rover.lead_state = LEADER_STOP;
                         }break;
-                        default:
-                            break;                        
+                         case(B_FSTOP):
+                        {
+                            pwm.target_left_spd = 0;
+                            pwm.target_right_spd = 0;
+                            interrupt_add_pwm(&pwm);
+                            if (right && left)
+                                rover.border = B_ALIGNED;
+                            else
+                                rover.border = B_BACK;
+                        }break;
+                         case(B_BSTOP):
+                        {
+                            pwm.target_left_spd = 0;
+                            pwm.target_right_spd = 0;
+                            interrupt_add_pwm(&pwm);
+                            if(left)
+                                rover.border = B_LEFT;
+                            else if(right)
+                                rover.border = B_RIGHT;
+                            else if (right && left)
+                                rover.border = B_FORWARD;
+                        }break;
                     }
-                }break; */               
+                            
+                }break;*/                
                 case(LEADER_STOP):
-                {                    
+                {     
+                    //uint32_t tmp_timer = (uint32_t) pvTimerGetTimerID(sensorTimer);
                     pwm.target_left_spd = 0;
                     pwm.target_right_spd = 0;
                     interrupt_add_pwm(&pwm);
                     //counter = 0;
-                    //rover.lead_state = LEADER_INIT;
-                    //send_message.type = NS_MOVEMENT;
-                    //send_message.data.ldr_m.dist_x = rover.ldr_m.dist_x;
-                    //send_message.data.ldr_m.dist_y = rover.ldr_m.dist_y;
-                    //send_message.data.ldr_m.turn_angle = rover.ldr_m.turn_angle;
-                    //send_message.data.ldr_m.angle_var = rover.ldr_m.angle_var;
-                   // send_message.data.ldr_m.move_var = rover.ldr_m.move_var;
-                   // network_send_add_message(&send_message);
+                    /*send_message.type = NS_MOVEMENT;
+                    send_message.data.ldr_m.dist_x = x_tot;
+                    send_message.data.ldr_m.dist_y = y_tot;
+                    if(sensorTimer == NULL)
+                    {
+                        send_message.data.ldr_m.turn_angle = 0.0;
+                    }
+                    else
+                    {
+                        send_message.data.ldr_m.turn_angle = 1.0;
+                    }                    
+                    send_message.data.ldr_m.angle_var = (double)sensorStart;  //rover.ldr_m.angle_var;
+                    send_message.data.ldr_m.move_var =  rover.ldr_m.move_var;
+                    network_send_add_message(&send_message);*/
+                    rover.lead_state = LEADER_INIT;
                     rover.got_cmnd = false;                    
                 }break;
                 case(LEADER_STALL):
@@ -821,63 +767,6 @@ void PROCESSING_Tasks() {
                     break;
             } 
         }      
-=======
-                /*send_message.type = NS_DEBUG_OC;
-                if(recv_message.data.timer.tmr4 > 10000){
-                    pwm.target_right_spd = 2e-5;
-                    pwm.target_left_spd = 2e-5;
-                    interrupt_add_pwm(&pwm);
-                }*/
-            } break;
-            case PR_ADC:
-            {
-                //TODO:: ADC DATA
-                //send_message.type = NS_ADC_READING;
-                //send_message.data.adc_reading.reading = recv_message.data.adc_sample;
-                //network_send_add_message(&send_message);
-            } break;
-            default:
-                break;               
-        }
-=======
-                /*send_message.type = NS_DEBUG_OC;
-                if(recv_message.data.timer.tmr4 > 10000){
-                    pwm.target_right_spd = 2e-5;
-                    pwm.target_left_spd = 2e-5;
-                    interrupt_add_pwm(&pwm);
-                }*/
-            } break;
-            case PR_ADC:
-            {
-                //TODO:: ADC DATA
-                //send_message.type = NS_ADC_READING;
-                //send_message.data.adc_reading.reading = recv_message.data.adc_sample;
-                //network_send_add_message(&send_message);
-            } break;
-            default:
-                break;               
-        }
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-        
-//        switch(rover.lead_state){
-//            case LEADER_INIT:
-//            {
-//                rover.ticks.t_right = 0;
-//                rover.ticks.t_left = 0;
-//            }break;
-//            case LEADER_MOVE:
-//            {
-//                pwm.target_right_spd = 2e-1;
-//                pwm.target_left_spd = 2e-1;
-//                leader_move(0,0);
-//                
-//                interrupt_add_pwm(&pwm);
-//            }break;
-//        }
-<<<<<<< HEAD
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
-=======
->>>>>>> parent of ac911b9... changed where my case block for rover movement was and made adjustments to speed of rover.  As of now rover moves with decent accuracy on straight movement and turns as well.
     }
 }
 
