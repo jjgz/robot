@@ -101,10 +101,10 @@ typedef union {
 } PRUnion;
 
 typedef struct{
-    uint32_t prev_left;
-    uint32_t prev_right;
-    uint32_t t_right;
-    uint32_t t_left;
+    double prev_left;
+    double prev_right;
+    double t_right;
+    double t_left;
 }pwm_ticks;
 
 typedef struct {
@@ -115,6 +115,8 @@ typedef struct {
 typedef struct{
     double target_left_spd;
     double target_right_spd;
+    bool right_dir;
+    bool left_dir;
 }pwm_to_isr;
 
 typedef struct{
@@ -143,12 +145,17 @@ typedef struct {
     SStates nextSense;
     SensorReading sensors;
     bool senseArray[8];
+    BasicPoint start_pos;
+    BasicPoint vertices[14];
+    BasicPoint current_pos;
+    unsigned ntargets;
+    unsigned nvertices;
     
 }leader;
 
 void processing_add_recvmsg(NRMessage *message);
 void interrupt_add_pwm(pwm_to_isr *pwm);
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4);
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, double tmr3, double tmr4, bool right, bool left);
 void processing_change_rover_state(uint32_t timer_state);
 void leader_state_change(double ultrasonic, double left_photo, double right_photo, double prev_left, double prev_right, double dist_thresh, double border_thresh);
 void processing_add_8c_reading( bool boolArray[8]);

@@ -71,13 +71,17 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 #include "processing.h"
 #include "system_config.h"
 #include "portmacro.h"
+#include "network/send.h"
 Pid pid_right;
 Pid pid_left;
 bool alter;
 double  target_right_spd;
 double  target_left_spd;
+bool left_back;
+bool right_back;
 const double desired_speed = 2e-1;
 QueueHandle_t interrupt_queue;
+NSMessage req_sensors;
 //unsigned counter = 0;
 #define SPEED_TICKS 1000
 
@@ -114,6 +118,8 @@ void IntHandlerDrvTmrInstance1(void)
 }
 void IntHandlerDrvTmrInstance2(void)
 {    
+    req_sensors.type = NS_REQ_PROXIMITY;
+    network_send_add_message_isr(&req_sensors);
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_TIMER_5); 
 }
 
@@ -125,13 +131,22 @@ void IntHandlerDrvTmrInstance3(void)
             xQueueReceiveFromISR(interrupt_queue, &recv_pwm, 0);        
             target_right_spd = recv_pwm.target_right_spd;
             target_left_spd = recv_pwm.target_left_spd;
+            left_back = recv_pwm.left_dir;
+            right_back = recv_pwm.right_dir;
         }
         const double scaling_left = 1.0;
         const double scaling_right = 1.020;
-        uint16_t output_r = clamp(pid_output(&pid_right, target_right_spd - scaling_right * (double)DRV_TMR0_CounterValueGet(),1e1,1e3,0),0,65535);
-        uint16_t output_l = clamp(pid_output(&pid_left,  target_left_spd - scaling_left * (double)DRV_TMR1_CounterValueGet(),1e1,1e3,0),0,65535);
-   
-        processing_add_pwm_reading(output_l, output_r, DRV_TMR0_CounterValueGet(), DRV_TMR1_CounterValueGet());
+        double right_ticks = scaling_right * DRV_TMR0_CounterValueGet();
+        double left_ticks = scaling_left * DRV_TMR1_CounterValueGet();
+        uint16_t output_r = clamp(pid_output(&pid_right, target_right_spd - right_ticks,1e1,1e3,0),0,65535);
+        uint16_t output_l = clamp(pid_output(&pid_left,  target_left_spd - left_ticks,1e1,1e3,0),0,65535);
+        if(left_back){
+            left_ticks = -left_ticks;
+        }
+        if(right_back){
+            right_ticks = -right_ticks;
+        }     
+        processing_add_pwm_reading(output_l, output_r, right_ticks, left_ticks, right_back, left_back);
         DRV_TMR0_CounterClear();
         DRV_TMR1_CounterClear();
         PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_r);

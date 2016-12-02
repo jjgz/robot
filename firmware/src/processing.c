@@ -25,6 +25,7 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 #include "processing.h"
 #include "network/send.h"
+#include "network/recv.h"
 #include "debug.h"
 #include "pid/pid.h"
 #include "peripheral/oc/plib_oc.h"
@@ -37,7 +38,14 @@ SUBSTITUTE GOODS, TECHNOLOGY, SERVICES, OR ANY CLAIMS BY THIRD PARTIES
 
 TimerHandle_t sensorTimer;
 BaseType_t sensorStart = 1;
-
+double cm_1tick = 0.153846/100;
+double degree_1tick = 0.16/50;
+double val = PI/180;
+double cm_to_ft = 0.0328084;
+double ft_to_cm = 30.48;
+double x_tot = 0;
+double y_tot  = 0;    
+double angle_tot = 0;
 extern Pid pid_right;
 extern Pid pid_left;
 //int tmr_cnt;
@@ -47,8 +55,8 @@ leader rover;
 uint32_t processing_counter;
 extern double target_right_spd;
 extern double target_left_spd;
-unsigned output_left_avg;
-unsigned output_right_avg;
+double output_left_avg;
+double output_right_avg;
 
 void rover_init(){
     rover.ticks.prev_left = 0;
@@ -58,8 +66,7 @@ void rover_init(){
     rover.stop_left = false;
     rover.slow_right = false;
     rover.slow_left = false;
-    rover.stop_right = false;
-    rover.got_cmnd = false;
+    rover.stop_right = false;    
     rover.ldr_m.dist_x = 0;
     rover.ldr_m.dist_y = 0;
     rover.ldr_m.turn_angle = 0;
@@ -70,7 +77,7 @@ void rover_init(){
     rover.sensors.r_photo = 0;
     rover.sensors.prev_lphoto = 0;
     rover.sensors.prev_rphoto = 0;
-    rover.thresholds.dist_thresh = 3.0;
+    rover.thresholds.dist_thresh = 0.3;
     rover.thresholds.border_thresh = 50.0;
     rover.lead_state = LEADER_MOVE;
     rover.sense_state = CHARGE;
@@ -129,18 +136,30 @@ void processing_add_8c_reading( bool boolArray[8]){
     xQueueSendToBack(processing_queue, &pr_message, portMAX_DELAY);
 }
 
-void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, uint32_t tmr3, uint32_t tmr4){
+void processing_add_pwm_reading(uint32_t left_pwm, uint32_t right_pwm, double tmr3, double tmr4, bool right, bool left){
     if(rover.got_cmnd) {
-        output_right_avg += right_pwm;
-        output_left_avg += left_pwm;
+        output_right_avg += tmr3;
+        output_left_avg += tmr4;
         rover.ticks.t_left += tmr4;
         rover.ticks.t_right += tmr3;
         processing_counter++;
         if(processing_counter == 50){
             processing_counter = 0;
             PRMessage pr_pwm_message;
-            output_right_avg = output_right_avg/50;
-            output_left_avg = output_left_avg/50;
+            //output_right_avg = output_right_avg/50;
+            //output_left_avg = output_left_avg/50;
+            
+            rover.ldr_m.dist_x = cm_to_ft*((output_right_avg + output_left_avg)*cm_1tick*cos((angle_tot)*val));
+            rover.ldr_m.dist_y = cm_to_ft*((output_right_avg + output_left_avg)*cm_1tick*sin((angle_tot)*val));
+            rover.ldr_m.move_var = 0.4;
+            x_tot += rover.ldr_m.dist_x;
+            y_tot += rover.ldr_m.dist_y;
+            rover.current_pos.x += rover.ldr_m.dist_x;
+            rover.current_pos.y += rover.ldr_m.dist_y;
+                
+           
+            angle_tot += (output_right_avg - output_left_avg)*degree_1tick*val;
+            
             pr_pwm_message.type = PR_PWM;
             pr_pwm_message.data.timer.r_spd = output_left_avg;
             pr_pwm_message.data.timer.l_spd = output_right_avg;
@@ -220,11 +239,13 @@ void PROCESSING_Tasks() {
     NSMessage send_message;
     pwm_to_isr pwm;
     int counter = 0;
-    double val = PI/180;
+    rover.got_cmnd = false;
     int turn_counter = 0;
-    double x_tot = 0;
-    double y_tot  = 0;
-    double angle_tot = 0;
+    x_tot = 0;
+    y_tot  = 0;    
+    angle_tot = 0;
+    rover.current_pos.x = 0;
+    rover.current_pos.y = 0;
     double prev_left_photo = 0;
     double prev_right_photo = 0;
     bool prevSensor[8] = {0};
@@ -272,16 +293,40 @@ void PROCESSING_Tasks() {
                         //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
                         
                     } break;
+                     case NR_INITIALIZE:
+                     {
+                         rover.ntargets = nr_message->data.initialization.nt;
+                         rover.start_pos.x = nr_message->data.initialization.ra.x;
+                         rover.start_pos.y = nr_message->data.initialization.ra.y;
+                         rover.nvertices = nr_message->data.initialization.nb;
+                         int i;
+                         for( i = 0; i < rover.nvertices; i++)
+                         {
+                             rover.vertices[i].x = nr_message->data.initialization.points[i].x;
+                             rover.vertices[i].y = nr_message->data.initialization.points[i].y;
+                         }
+                         angle_tot = 0;
+                         rover.current_pos.x = rover.start_pos.x;
+                         rover.current_pos.y = rover.start_pos.y;
+                         rover.got_cmnd = true;
+                     }break;
                      case NR_REQ_MOVEMENT:
                      {
                          send_message.type = NS_MOVEMENT;
-                         send_message.data.movement.x = rover.ldr_m.dist_x;
-                         send_message.data.movement.y = rover.ldr_m.dist_y;
-                         send_message.data.movement.angle = rover.ldr_m.turn_angle;
+                         send_message.data.movement.x = rover.current_pos.x;
+                         send_message.data.movement.y = rover.current_pos.y;
+                         send_message.data.movement.angle = angle_tot;
                          send_message.data.movement.av = rover.ldr_m.angle_var;
                          send_message.data.movement.v = rover.ldr_m.move_var;
                          network_send_add_message(&send_message);
                          
+                     }break;
+                     case NR_PROXIMITY:
+                     {
+                         rover_init();                        
+                         rover.lead_state = LEADER_INIT;
+                         rover.sensors.l_ir = nr_message->data.proximity.left_ir;
+                         rover.sensors.r_ir = nr_message->data.proximity.right_ir;
                      }break;
                      case NR_SENSORS:
                      {
@@ -299,8 +344,7 @@ void PROCESSING_Tasks() {
                             rover.sensors.ultra = 5.0;
                             turn_counter = 0;
                         }*/
-                        rover_init();                        
-                        rover.lead_state = LEADER_INIT;
+                        
                         rover.sensors.prev_lphoto = prev_left_photo;
                         rover.sensors.prev_rphoto = prev_right_photo;
                         rover.sensors.ultra = nr_message->data.ult_photo.ultra;
@@ -308,7 +352,7 @@ void PROCESSING_Tasks() {
                         rover.sensors.r_photo = nr_message->data.ult_photo.r_photo;
                         //leader_state_change(ul, lp, rp,rover.sensors.prev_lphoto, rover.sensors.prev_rphoto, rover.thresholds.dist_thresh, rover.thresholds.border_thresh);
                         //leader_state_change(rover.sensors.ultra, rover.sensors.l_photo, rover.sensors.r_photo,rover.sensors.prev_lphoto, rover.sensors.prev_rphoto, rover.thresholds.dist_thresh, rover.thresholds.border_thresh);
-                        rover.got_cmnd = true;
+                        
                      }break;
                     case NR_DEBUG_JOE_TREAD:
                     {
@@ -444,7 +488,7 @@ void PROCESSING_Tasks() {
             switch(rover.lead_state){
                 case(LEADER_INIT):
                 {                    
-                    if(rover.sensors.ultra <= rover.thresholds.dist_thresh)
+                    if((rover.sensors.l_ir < rover.thresholds.dist_thresh)||(rover.sensors.r_ir < rover.thresholds.dist_thresh))
                     {
                         rover.lead_state = LEADER_TURN;
                     }
@@ -465,6 +509,8 @@ void PROCESSING_Tasks() {
                     leader_move(0,0);
                     pwm.target_left_spd = 3e-1;
                     pwm.target_right_spd = 3e-1;
+                    pwm.left_dir = 0;
+                    pwm.right_dir = 0;
                     interrupt_add_pwm(&pwm);
                     //rover.lead_state = LEADER_WAIT;
                     //SYS_PORTS_PinWrite(0, PORT_CHANNEL_C, PORTS_BIT_POS_1, 1);
@@ -479,19 +525,21 @@ void PROCESSING_Tasks() {
                         rover.stop_left = true;
                     }
                     
-                    if(rover.stop_left && rover.stop_right)
-                    {
-                        rover.lead_state = LEADER_STOP;                        
-                        pwm.target_left_spd = 0;
-                        pwm.target_right_spd = 0;
-                        interrupt_add_pwm(&pwm);                       
-                        rover.ldr_m.dist_x += 5.1*cos((90-angle_tot)*val);
-                        rover.ldr_m.dist_y += 5.1*sin((90-angle_tot)*val);
+                    //if(rover.stop_left && rover.stop_right)
+                    //{
+                        //rover.lead_state = LEADER_STOP;                        
+                        //pwm.target_left_spd = 0;
+                        //pwm.target_right_spd = 0;
+                        //interrupt_add_pwm(&pwm);                       
+                        /*rover.ldr_m.dist_x += cm_to_ft*(0.01*cos((90-angle_tot)*val));
+                        rover.ldr_m.dist_y += cm_to_ft*(0.01*sin((90-angle_tot)*val));
                         rover.ldr_m.move_var = 0.4;
                         x_tot += rover.ldr_m.dist_x;
                         y_tot += rover.ldr_m.dist_y;
+                        rover.current_pos.x += rover.ldr_m.dist_x;
+                        rover.current_pos.y += rover.ldr_m.dist_y;*/
                         //send_message.data.ldr_m.turn_angle = 24.0;
-                    }                    
+                    //}                    
                 }break;
                 case(LEADER_BACK):
                 {
@@ -506,6 +554,8 @@ void PROCESSING_Tasks() {
                     leader_move(0,1);
                     pwm.target_left_spd = 1.5e-1;
                     pwm.target_right_spd = 1.5e-1;
+                    pwm.right_dir = 0;
+                    pwm.left_dir = 1;
                     //rover.lead_state = LEADER_WAIT;
                     interrupt_add_pwm(&pwm);
                     if(rover.ticks.t_right >= ROTATE(1)/12)
@@ -518,17 +568,21 @@ void PROCESSING_Tasks() {
                         rover.ticks.t_left = 0;
                         rover.stop_left = true;
                     }
-                     if(rover.stop_left && rover.stop_right)
+                     /*if(rover.stop_left && rover.stop_right)
                     {
-                        rover.lead_state = LEADER_STOP;                        
-                        pwm.target_left_spd = 0;
-                        pwm.target_right_spd = 0;
-                        interrupt_add_pwm(&pwm);
-                        rover.ldr_m.turn_angle += 13.5;
+                        //rover.lead_state = LEADER_STOP;                        
+                        //pwm.target_left_spd = 0;
+                        //pwm.target_right_spd = 0;
+                        //interrupt_add_pwm(&pwm);
+                        rover.ldr_m.turn_angle += 12.5;
                         rover.ldr_m.angle_var = 1.5*1.5;
-                        angle_tot += rover.ldr_m.turn_angle;
+                        angle_tot += val*rover.ldr_m.turn_angle;
                         //send_message.data.ldr_m.turn_angle = 24.0;
-                    }   
+                    }*/
+                    if((rover.sensors.l_ir > (2.0*rover.thresholds.dist_thresh))&&(rover.sensors.r_ir > (2.0*rover.thresholds.dist_thresh)))
+                    {
+                        rover.lead_state = LEADER_MOVE;
+                    }
                 }break;
                 case(LEADER_WAIT):
                 {     
