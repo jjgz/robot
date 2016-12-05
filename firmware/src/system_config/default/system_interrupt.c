@@ -77,8 +77,13 @@ Pid pid_left;
 bool alter;
 double  target_right_spd;
 double  target_left_spd;
+double prev_left_tspd = 0;
+double prev_right_tspd = 0;
+double ramp_spd_r = 0;
+double ramp_spd_l = 0;
 bool left_back;
 bool right_back;
+extern leader rover;
 const double desired_speed = 2e-1;
 QueueHandle_t interrupt_queue;
 NSMessage req_sensors;
@@ -117,9 +122,19 @@ void IntHandlerDrvTmrInstance1(void)
     PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_4);
 }
 void IntHandlerDrvTmrInstance2(void)
-{    
-    req_sensors.type = NS_REQ_PROXIMITY;
-    network_send_add_message_isr(&req_sensors);
+{   
+    switch(rover.lead_state)
+    {
+        case LEADER_WAIT_ASSUMED:
+            req_sensors.type = NS_REQ_ASSUMED;
+            network_send_add_message_isr(&req_sensors);
+            break;
+        default:
+            req_sensors.type = NS_REQ_PROXIMITY;
+            network_send_add_message_isr(&req_sensors);
+            break;
+    }
+    
     PLIB_INT_SourceFlagClear(INT_ID_0, INT_SOURCE_TIMER_5); 
 }
 
@@ -135,20 +150,34 @@ void IntHandlerDrvTmrInstance3(void)
             right_back = recv_pwm.right_dir;
         }
         const double scaling_left = 1.0;
-        const double scaling_right = 1.020;
+        const double scaling_right = 1.009;
         double right_ticks = scaling_right * DRV_TMR0_CounterValueGet();
         double left_ticks = scaling_left * DRV_TMR1_CounterValueGet();
-        uint16_t output_r = clamp(pid_output(&pid_right, target_right_spd - right_ticks,1e1,1e3,0),0,65535);
-        uint16_t output_l = clamp(pid_output(&pid_left,  target_left_spd - left_ticks,1e1,1e3,0),0,65535);
+        
+        if (target_left_spd < ramp_spd_l) {
+            ramp_spd_l -= min(0.001, ramp_spd_l - target_left_spd);
+        } else {
+            ramp_spd_l += min(0.001, target_left_spd - ramp_spd_l);
+        }
+        
+        if (target_right_spd < ramp_spd_r) {
+            ramp_spd_r -= min(0.001, ramp_spd_r - target_right_spd);
+        } else {
+            ramp_spd_r += min(0.001, target_right_spd - ramp_spd_r);
+        }
+        
+        uint16_t output_r = clamp(pid_output(&pid_right, ramp_spd_r - right_ticks,1e1,1e3,0),0,65535);
+        uint16_t output_l = clamp(pid_output(&pid_left,  ramp_spd_l - left_ticks,1e1,1e3,0),0,65535);
         if(left_back){
             left_ticks = -left_ticks;
         }
         if(right_back){
             right_ticks = -right_ticks;
-        }     
+        }       
         processing_add_pwm_reading(output_l, output_r, right_ticks, left_ticks, right_back, left_back);
         DRV_TMR0_CounterClear();
         DRV_TMR1_CounterClear();
+        leader_move(right_back, left_back);
         PLIB_OC_PulseWidth16BitSet(OC_ID_2, output_r);
         PLIB_OC_PulseWidth16BitSet(OC_ID_1, output_l);
         PLIB_INT_SourceFlagClear(INT_ID_0,INT_SOURCE_TIMER_2);

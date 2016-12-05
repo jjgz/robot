@@ -72,6 +72,9 @@ typedef enum {
             LEADER_BORDER,
             LEADER_BACK,
             LEADER_STALL,
+            LEADER_STOP_FOR_ALIGN,
+            LEADER_ALIGN_TURN,
+            LEADER_WAIT_ASSUMED,
 }LStates;
 
 typedef enum {
@@ -138,6 +141,8 @@ typedef struct {
     bool stop_right;
     bool slow_left;
     bool slow_right;
+    bool aligning;
+    bool align_done;
     thresh thresholds;
     bool got_cmnd;
     ldr_move ldr_m;
