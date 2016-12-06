@@ -627,7 +627,7 @@ void PROCESSING_Tasks() {
                 {  
                     
                     
-                    if(angle_tot - prev_align_angle > M_PI/2)
+                    if(angle_tot - prev_align_angle > 1.15*M_PI/2)
                     {
                         
                         rover.lead_state = LEADER_INIT; 
